@@ -1,8 +1,30 @@
 import { Card } from '@rneui/themed';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-
+import { supabase } from '../lib/supabase'
 
 export default function Index() {
+  // const [user, setUser] = useState<any>(null); // State to store the user object
+
+  // useEffect(() => {
+  //   // Get the current logged-in user
+  //   const fetchUser = async () => {
+  //     try {
+  //       const { data: { user }, error } = await supabase.auth.getUser();
+  //       if (error) {
+  //         console.error('Error fetching user:', error);
+  //         return;
+  //       }
+  //       setUser(user); // Set the user if logged in
+  //     } catch (error) {
+  //       console.error('Error:', error);
+  //     }
+  //   };
+
+  //   fetchUser(); // Call the function to fetch user
+
+  // }, []); 
+
   return (
     <View
       style={styles.container}>
@@ -21,6 +43,13 @@ export default function Index() {
           },
         ]}>
           <View>
+      {/* {user ? (
+        <Text>User ID: {user.id}</Text>
+      ) : (
+        <Text>No user logged in</Text>
+      )} */}
+    </View>
+          <View>
             <Text style={styles.medText}>Carbs</Text>
             <Text style={styles.gramsText}>50g / 120g</Text>
             <View style={{height: '5%', backgroundColor:'#C889CD', borderRadius: '5%'}}></View>
@@ -32,6 +61,7 @@ export default function Index() {
           </View>
           <View>
             <Text style={styles.medText}>Protein</Text>
+            
             <Text style={styles.gramsText}>50g / 120g</Text>
             <View style={{height: '5%', backgroundColor:'#CD8A89', borderRadius: '5%'}}></View>
           </View>
@@ -43,7 +73,7 @@ export default function Index() {
       </View>
 
     </View>
-  );
+  ); 
 }
 
 const styles = StyleSheet.create({

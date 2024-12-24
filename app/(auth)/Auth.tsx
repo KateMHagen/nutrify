@@ -3,6 +3,8 @@ import { Alert, StyleSheet, View, AppState, Button } from 'react-native'
 import { supabase } from '../lib/supabase'
 // import { Input } from '@rneui/themed'
 import { Input } from "@rneui/base";
+import { routeToScreen } from 'expo-router/build/useScreens';
+import { router } from 'expo-router';
 
 // Tells Supabase Auth to continuously refresh the session automatically if
 // the app is in the foreground. When this is added, you will continue to receive
@@ -23,11 +25,15 @@ export default function Auth() {
 
   async function signInWithEmail() {
     setLoading(true)
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error, data: {session}, } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
-    })
+    });
 
+    if(session) {
+      router.push("./index.tsx");
+    }
+  
     if (error) Alert.alert(error.message)
     setLoading(false)
   }
@@ -41,6 +47,10 @@ export default function Auth() {
       email: email,
       password: password,
     })
+
+    if(session) {
+      router.push("./index.tsx");
+    }
 
     // if (error) Alert.alert(error.message)
     // if (!session) Alert.alert('Please check your inbox for email verification!')
