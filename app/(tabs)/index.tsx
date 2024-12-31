@@ -1,49 +1,21 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { CustomButton } from "../components/CustomButton";
 import { router } from 'expo-router';
+import { useMeals } from '../context/MealsContext'; // Import useMeals hook
 
 export default function Index() {
-  const [meals, setMeals] = useState([
-    { id: 1, name: 'Breakfast', carbs: '50g', fat: '50g', protein: '50g', calories: '500 kcal', foods: ['Eggs', 'Toast', 'Orange Juice'] },
-    { id: 2, name: 'Lunch', carbs: '60g', fat: '30g', protein: '40g', calories: '450 kcal', foods: ['Salad', 'Chicken', 'Rice'] },
-    { id: 3, name: 'Dinner', carbs: '40g', fat: '20g', protein: '30g', calories: '350 kcal', foods: ['Steak', 'Potatoes', 'Green Beans'] },
-  ]);
-
+  const { meals, setMeals } = useMeals(); // Access meals and setMeals from context
   const [editingMeal, setEditingMeal] = useState<{ id: number; name: string } | null>(null);
   const [expandedMealId, setExpandedMealId] = useState<number | null>(null);
 
-  // Get next available meal ID
-  const getNextMealId = () => {
-    const maxId = meals.reduce((max, meal) => Math.max(max, meal.id), 0);
-    return maxId + 1;
-  };
-
-  const addMeal = () => {
-    const newMeal = {
-      id: getNextMealId(),
-      name: `Meal`,
-      carbs: '0g',
-      fat: '0g',
-      protein: '0g',
-      calories: '0 kcal',
-      foods: [], // Empty foods list initially
-    };
-    setMeals([...meals, newMeal]);
-  };
-
-  const removeMeal = (id: number) => {
-    const newMeals = meals.filter((meal) => meal.id !== id)
-    setMeals(newMeals);
-  };
-
-  const handleTap = (meal: { id: any; name: any; }) => {
+  const handleTap = (meal: { id: number; name: string }) => {
     setEditingMeal({ id: meal.id, name: meal.name });
   };
 
   const handleNameChange = (newName: string) => {
     setEditingMeal((prev) => ({
-      ...(prev || { id: -1 }), // Default ID if prev is null
+      ...(prev || { id: -1 }),
       name: newName,
     }));
   };
@@ -67,69 +39,71 @@ export default function Index() {
     return meals.map((meal) => (
       <View key={meal.id} style={styles.mealContainer}>
         <View style={styles.mealInfo}>
-         
-            <View>
-              <View style={styles.mealInfoName}>
-                <TouchableWithoutFeedback onPress={() => toggleExpandMeal(meal.id)}>
-                  <Text style={styles.expandText}>{expandedMealId === meal.id ? '▲' : '▼'}</Text>
-                </TouchableWithoutFeedback>
-                <TouchableWithoutFeedback
-                  onPress={() => handleTap(meal)}
-                  delayLongPress={300} // Adjust for responsiveness
-                >
-                  {editingMeal?.id === meal.id ? (
-                    <TextInput
-                      value={editingMeal.name}
-                      onChangeText={handleNameChange}
-                      onBlur={saveName} // Save name when input loses focus
-                      autoFocus
-                      style={[styles.input, {fontFamily: 'OpenSans_400Regular'}]}
-                    />
-                  ) : (
-                    <Text style={{fontFamily: 'OpenSans_400Regular'}} >{meal.name}</Text>
-                  )}
-                </TouchableWithoutFeedback>
-              </View>
-              <View style={styles.mealInfoMacros}>
-                <View style={[styles.circle, { backgroundColor: '#C889CD' }]} />
-                <Text style={styles.macrosText}>{meal.carbs}</Text>
-                <View style={[styles.circle, { backgroundColor: '#89B5CD' }]} />
-                <Text style={styles.macrosText}>{meal.fat}</Text>
-                <View style={[styles.circle, { backgroundColor: '#CD8A89' }]} />
-                <Text style={styles.macrosText}>{meal.protein}</Text>
-              </View>
+          <View>
+            <View style={styles.mealInfoName}>
+              <TouchableWithoutFeedback onPress={() => toggleExpandMeal(meal.id)}>
+                <Text style={styles.expandText}>{expandedMealId === meal.id ? '▲' : '▼'}</Text>
+              </TouchableWithoutFeedback>
+              <TouchableWithoutFeedback
+                onPress={() => handleTap(meal)}
+                delayLongPress={300}
+              >
+                {editingMeal?.id === meal.id ? (
+                  <TextInput
+                    value={editingMeal.name}
+                    onChangeText={handleNameChange}
+                    onBlur={saveName}
+                    autoFocus
+                    style={[styles.input, { fontFamily: 'OpenSans_400Regular' }]}
+                  />
+                ) : (
+                  <Text style={{ fontFamily: 'OpenSans_400Regular' }}>{meal.name}</Text>
+                )}
+              </TouchableWithoutFeedback>
             </View>
-            
-            <View>
-              <Text style={{fontFamily: 'OpenSans_400Regular'}}>{meal.calories}</Text>
-              <CustomButton label="Add Food" onPress={() => router.push("/add-food")}/>
+            <View style={styles.mealInfoMacros}>
+              <View style={[styles.circle, { backgroundColor: '#C889CD' }]} />
+              <Text style={styles.macrosText}>{meal.carbs}</Text>
+              <View style={[styles.circle, { backgroundColor: '#89B5CD' }]} />
+              <Text style={styles.macrosText}>{meal.fat}</Text>
+              <View style={[styles.circle, { backgroundColor: '#CD8A89' }]} />
+              <Text style={styles.macrosText}>{meal.protein}</Text>
             </View>
-            
-            
-         
-
-          
-            
+          </View>
+  
+          <View>
+            {/* Display total calories */}
+            <Text style={{ fontFamily: 'OpenSans_400Regular' }}>{meal.calories}</Text>
+            <CustomButton
+              label="Add Food"
+              onPress={() => router.push({ pathname: "/add-food", params: { mealId: meal.id } })}
+            />
+          </View>
         </View>
-          
-          {expandedMealId === meal.id && (
-            <View>
-              {meal.foods.length > 0 ? (
-                meal.foods.map((food, index) => <Text key={index} style={[styles.foodItem, {fontFamily: 'OpenSans_400Regular'}]}>{food}</Text>)
-              ) : (
-                <Text>No foods logged</Text>
-              )}
-            </View>
-          )}
-        
-        <View>
-          
-         
-          {/* <CustomButton label="Remove Meal" onPress={() => removeMeal(meal.id)} /> */}
-        </View> 
+  
+        {/* Expand meal to show individual foods */}
+        {expandedMealId === meal.id && (
+          <View>
+            {meal.foods.length > 0 ? (
+              <>
+                {/* List individual foods */}
+                {meal.foods.map((food, index) => (
+                  <Text key={index} style={[styles.foodItem, { fontFamily: 'OpenSans_400Regular' }]}>
+                    {food}
+                  </Text>
+                ))}
+  
+                
+              </>
+            ) : (
+              <Text>No foods logged</Text>
+            )}
+          </View>
+        )}
       </View>
     ));
   };
+  
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -157,7 +131,7 @@ export default function Index() {
             </View>
           </View>
         </View>
-        <View style={{ flex: 6, backgroundColor: '#FFFFFF', borderTopLeftRadius: 70, borderTopRightRadius: 70, marginTop: 10}}>
+        <View style={{ flex: 6, backgroundColor: '#FFFFFF', borderTopLeftRadius: 70, borderTopRightRadius: 70, marginTop: 10 }}>
           <View style={styles.dayNav}>
             <Text>Yesterday</Text>
             <Text>Today</Text>
@@ -165,7 +139,7 @@ export default function Index() {
           </View>
           {renderMeals()}
           <View style={styles.addMealBtn}>
-            <CustomButton label="Add meal" onPress={addMeal} />
+            <CustomButton label="Add meal" onPress={() => setMeals([...meals, { id: meals.length + 1, name: `Meal`, carbs: '0g', fat: '0g', protein: '0g', calories: '0 kcal', foods: [] }])} />
           </View>
         </View>
       </View>

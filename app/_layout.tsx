@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "./lib/supabase";
 import { useRouter } from "expo-router";
 import { Session } from "@supabase/supabase-js";
+import { MealsProvider } from "./context/MealsContext";
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
@@ -27,14 +28,16 @@ export default function RootLayout() {
   }, [session, router]);
 
   return (
-    <Stack>
-      {/* Main tabs */}
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      
-      {/* Login and Signup */}
-      <Stack.Screen name="App" options={{ headerShown: false }} />
-      <Stack.Screen name="sign-in/index" options={{ headerShown: false }} />
-      <Stack.Screen name="sign-up/index" options={{ headerShown: false }} />
-    </Stack>
+    <MealsProvider>
+      <Stack>
+        {/* Main tabs */}
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        
+        {/* Login and Signup */}
+        <Stack.Screen name="App" options={{ headerShown: false }} />
+        <Stack.Screen name="sign-in/index" options={{ headerShown: false }} />
+        <Stack.Screen name="sign-up/index" options={{ headerShown: false }} />
+      </Stack>
+    </MealsProvider>
   );
 }
