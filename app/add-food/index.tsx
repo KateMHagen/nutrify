@@ -105,7 +105,7 @@ export default function AddFoodScreen() {
 
   return (
     <View style={{ padding: 16 }}>
-      <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Search for a food</Text>
+      <Text style={{ fontSize: 18, fontWeight: 'bold', fontFamily: 'OpenSans_400Regular' }}>Search for a food</Text>
       <TextInput
         value={query}
         onChangeText={setQuery}
@@ -117,6 +117,7 @@ export default function AddFoodScreen() {
           marginTop: 10,
           paddingLeft: 10,
           borderRadius: 5,
+          fontFamily: 'OpenSans_400Regular'
         }}
       />
       <Button title="Search" onPress={handleSearch} disabled={loading} />
@@ -126,15 +127,13 @@ export default function AddFoodScreen() {
         keyExtractor={(item) => item.food_id.toString()}
         renderItem={({ item }) => (
           <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              paddingVertical: 10,
-            }}
+            style={styles.foodItemContainer}
           >
+            {/* List of searched food items */}
+            {/* Click food item to see nutrition info, and can change serving grams */}
             <TouchableOpacity onPress={() => handleSelectFood(item)}>
-              <Text style={{ padding: 10 }}>{item.food_name}</Text>
+              <Text style={styles.foodItem}>{item.food_name}</Text>
+              <Text style={styles.smallText}>{item.food_description}</Text>
             </TouchableOpacity>
             {/* Instant Add Button */}
             <TouchableOpacity onPress={() => addFoodToMeal(item)}>
@@ -176,3 +175,23 @@ export default function AddFoodScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  foodItemContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: '#D6CECE',
+    marginBottom: 5
+  },
+  foodItem: {
+    marginBottom: 5,
+    fontFamily: 'OpenSans_400Regular',
+  },
+  smallText: {
+    fontSize: 10,
+    fontFamily: 'OpenSans_400Regular'
+  },
+})
