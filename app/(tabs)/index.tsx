@@ -62,72 +62,7 @@ export default function Index() {
     setExpandedMealId((prevId) => (prevId === id ? null : id)); // Toggle expand/collapse
   };
 
-  const renderMeals = () => {
-    return meals.map((meal) => (
-      <View key={meal.id} style={styles.mealContainer}>
-        <View style={styles.mealInfo}>
-          <View>
-            <View style={styles.mealInfoName}>
-              <TouchableWithoutFeedback onPress={() => toggleExpandMeal(meal.id)}>
-                <Text style={styles.expandText}>{expandedMealId === meal.id ? '▲' : '▼'}</Text>
-              </TouchableWithoutFeedback>
-              <TouchableWithoutFeedback
-                onPress={() => handleTap(meal)}
-                delayLongPress={300}
-              >
-                {editingMeal?.id === meal.id ? (
-                  <TextInput
-                    value={editingMeal.name}
-                    onChangeText={handleNameChange}
-                    onBlur={saveName}
-                    autoFocus
-                    style={[styles.input, { fontFamily: 'OpenSans_400Regular' }]}
-                  />
-                ) : (
-                  <Text style={{ fontFamily: 'OpenSans_400Regular' }}>{meal.name}</Text>
-                )}
-              </TouchableWithoutFeedback>
-            </View>
-            <View style={styles.mealInfoMacros}>
-              <View style={[styles.circle, { backgroundColor: '#C889CD' }]} />
-              <Text style={styles.macrosText}>{meal.carbs}</Text>
-              <View style={[styles.circle, { backgroundColor: '#89B5CD' }]} />
-              <Text style={styles.macrosText}>{meal.fat}</Text>
-              <View style={[styles.circle, { backgroundColor: '#CD8A89' }]} />
-              <Text style={styles.macrosText}>{meal.protein}</Text>
-            </View>
-          </View>
   
-          <View>
-            {/* Display total calories */}
-            <Text style={{ fontFamily: 'OpenSans_400Regular' }}>{meal.calories}</Text>
-            <CustomButton
-              label="Add Food"
-              onPress={() => router.push({ pathname: "/add-food", params: { mealId: meal.id } })}
-            />
-          </View>
-        </View>
-  
-        {/* Expand meal to show individual foods */}
-        {expandedMealId === meal.id && (
-          <View>
-            {meal.foods.length > 0 ? (
-              <>
-                {/* List individual foods */}
-                {meal.foods.map((food, index) => (
-                  <Text key={index} style={[styles.foodItem, { fontFamily: 'OpenSans_400Regular' }]}>
-                    {food}
-                  </Text>
-                ))}
-              </>
-            ) : (
-              <Text>No foods logged</Text>
-            )}
-          </View>
-        )}
-      </View>
-    ));
-  };
   
 
   return (
