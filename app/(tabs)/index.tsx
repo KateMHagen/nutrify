@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableWithoutFeedback, Keyboard, FlatList } from 'react-native';
 import { CustomButton } from "../components/CustomButton";
 import { router } from 'expo-router';
@@ -9,6 +9,33 @@ export default function Index() {
   const [editingMeal, setEditingMeal] = useState<{ id: number; name: string } | null>(null);
   const [expandedMealId, setExpandedMealId] = useState<number | null>(null);
 
+  const [dailyTotals, setDailyTotals] = useState({
+    calories: 0,
+    carbs: 0,
+    fat: 0,
+    protein: 0,
+  });
+
+  // Calculate daily totals
+  useEffect(() => {
+    const totals = meals.reduce(
+      (acc, meal) => {
+        acc.calories += parseInt(meal.calories) || 0;
+        acc.carbs += parseInt(meal.carbs) || 0;
+        acc.fat += parseInt(meal.fat) || 0;
+        acc.protein += parseInt(meal.protein) || 0;
+        return acc;
+      },
+      { calories: 0, carbs: 0, fat: 0, protein: 0 }
+    );
+    setDailyTotals({
+      calories: Math.round(totals.calories),
+      carbs: Math.round(totals.carbs),
+      fat: Math.round(totals.fat),
+      protein: Math.round(totals.protein),
+    });
+  }, [meals]);
+  
   const handleTap = (meal: { id: number; name: string }) => {
     setEditingMeal({ id: meal.id, name: meal.name });
   };
@@ -109,22 +136,22 @@ export default function Index() {
         <View style={styles.headerContainer}>
           <View style={{ alignItems: 'center', marginTop: 15 }}>
             <Text style={styles.smallText}>Wednesday 18th December</Text>
-            <Text style={[styles.bigText, { marginTop: 10 }]}>1000 kcal / 1500 kcal</Text>
+            <Text style={[styles.bigText, { marginTop: 10 }]}>{dailyTotals.calories} kcal / 1500 kcal</Text>
           </View>
           <View style={styles.headerInfo}>
             <View>
               <Text style={styles.medText}>Carbs</Text>
-              <Text style={styles.gramsText}>50g / 120g</Text>
+              <Text style={styles.gramsText}>{dailyTotals.carbs}g / 120g</Text>
               <View style={{ height: '5%', backgroundColor: '#C889CD', borderRadius: '5%' }}></View>
             </View>
             <View>
               <Text style={styles.medText}>Fat</Text>
-              <Text style={styles.gramsText}>50g / 120g</Text>
+              <Text style={styles.gramsText}>{dailyTotals.fat}g / 120g</Text>
               <View style={{ height: '5%', backgroundColor: '#89B5CD', borderRadius: '5%' }}></View>
             </View>
             <View>
               <Text style={styles.medText}>Protein</Text>
-              <Text style={styles.gramsText}>50g / 120g</Text>
+              <Text style={styles.gramsText}>{dailyTotals.protein}g / 120g</Text>
               <View style={{ height: '5%', backgroundColor: '#CD8A89', borderRadius: '5%' }}></View>
             </View>
           </View>
@@ -231,7 +258,7 @@ const styles = StyleSheet.create({
   headerInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: 5,
     
   },
   smallText: {

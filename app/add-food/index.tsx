@@ -122,26 +122,28 @@ export default function AddFoodScreen() {
       />
       <Button title="Search" onPress={handleSearch} disabled={loading} />
       {loading && <ActivityIndicator size="large" color="#0000ff" />}
-      <FlatList
-        data={foods}
-        keyExtractor={(item) => item.food_id.toString()}
-        renderItem={({ item }) => (
-          <View
-            style={styles.foodItemContainer}
-          >
-            {/* List of searched food items */}
-            {/* Click food item to see nutrition info, and can change serving grams */}
-            <TouchableOpacity onPress={() => handleSelectFood(item)}>
-              <Text style={styles.foodItem}>{item.food_name}</Text>
-              <Text style={styles.smallText}>{item.food_description}</Text>
-            </TouchableOpacity>
-            {/* Instant Add Button */}
-            <TouchableOpacity onPress={() => addFoodToMeal(item)}>
-              <Text style={{ color: 'green', fontSize: 18 }}>+</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      />
+      <View style={{paddingBottom: 250}}>
+        <FlatList
+          data={foods}
+          keyExtractor={(item) => item.food_id.toString()}
+          renderItem={({ item }) => (
+            <View
+              style={styles.foodItemContainer}
+            >
+              {/* List of searched food items */}
+              {/* Click food item to see nutrition info, and can change serving grams */}
+              <TouchableOpacity onPress={() => handleSelectFood(item)}>
+                <Text style={styles.foodItem}>{item.food_name}</Text>
+                <Text style={styles.smallText}>{item.food_description}</Text>
+              </TouchableOpacity>
+              {/* Instant Add Button */}
+              <TouchableOpacity onPress={() => addFoodToMeal(item)}>
+                <Text style={{ color: 'green', fontSize: 18 }}>+</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        />
+      </View>
 
       {/* Modal for custom gram entry */}
       <Modal visible={!!selectedFood} animationType="slide">
