@@ -4,7 +4,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'rea
 import { Session } from '@supabase/supabase-js';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { OpenSans_400Regular, OpenSans_800ExtraBold } from '@expo-google-fonts/open-sans';
+import { OpenSans_400Regular, OpenSans_700Bold, OpenSans_800ExtraBold } from '@expo-google-fonts/open-sans';
 import { CustomButton } from './components/CustomButton';
 
 export default function App() {
@@ -14,6 +14,7 @@ export default function App() {
   // Load fonts
   const [fontsLoaded] = useFonts({
     OpenSans_400Regular,
+    OpenSans_700Bold,
     OpenSans_800ExtraBold,
   }); 
 

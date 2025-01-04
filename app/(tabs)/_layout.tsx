@@ -9,9 +9,9 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "blue", // Active tab color
+        tabBarActiveTintColor: "black", // Active tab color
         tabBarStyle: {
-          backgroundColor: '#E0EBF1', // Set the background color of the tab bar
+          backgroundColor: '#BAA1A7', // Set the background color of the tab bar
           ...Platform.select({
             ios: {
               position: 'absolute', // For iOS, if you want a transparent background effect
@@ -21,7 +21,7 @@ export default function TabLayout() {
         },
         headerTitle: 'Nutrify', // Set a global header title
         headerStyle: {
-          backgroundColor: '#CDD8DE',
+          backgroundColor: '#BAA1A7',
         },
      
       }}
@@ -37,13 +37,6 @@ export default function TabLayout() {
         name="Diary"
         options={{
           title: 'Diary',
-          tabBarIcon: ({ color }) => <AntDesign name="book" size={28} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="Recipes"
-        options={{
-          title: 'Recipes',
           tabBarIcon: ({ color }) => <AntDesign name="book" size={28} color={color} />,
         }}
       />

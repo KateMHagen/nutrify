@@ -1,13 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableWithoutFeedback, Keyboard, FlatList } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableWithoutFeedback,
+  Keyboard,
+  FlatList,
+  TouchableOpacity,
+  Modal,
+} from 'react-native';
 import { CustomButton } from "../components/CustomButton";
 import { router } from 'expo-router';
-import { useMeals } from '../context/MealsContext'; 
+import { useMeals } from '../context/MealsContext';
 
 export default function Index() {
   const { meals, setMeals } = useMeals(); // Access meals and setMeals from context
   const [editingMeal, setEditingMeal] = useState<{ id: number; name: string } | null>(null);
   const [expandedMealId, setExpandedMealId] = useState<number | null>(null);
+  const [selectedFood, setSelectedFood] = useState<{ mealId: number; foodName: string } | null>(null);
+  const [customWeight, setCustomWeight] = useState<number>(100);
 
   const [dailyTotals, setDailyTotals] = useState({
     calories: 0,
@@ -35,7 +47,34 @@ export default function Index() {
       protein: Math.round(totals.protein),
     });
   }, [meals]);
-  
+
+  const toggleExpandMeal = (id: number) => {
+    setExpandedMealId((prevId) => (prevId === id ? null : id)); // Toggle expand/collapse
+  };
+
+  const handleSelectFood = (mealId: number, foodName: string) => {
+    setSelectedFood({ mealId, foodName });
+  };
+
+  const updateFoodInMeal = (mealId: number, foodName: string, weight: number) => {
+    setMeals((prevMeals) =>
+      prevMeals.map((meal) => {
+        if (meal.id === mealId) {
+          return {
+            ...meal,
+            foods: meal.foods.map((food) =>
+              food === foodName
+                ? `${foodName} (${weight}g)` // Update food name with weight
+                : food
+            ),
+          };
+        }
+        return meal;
+      })
+    );
+    setSelectedFood(null); // Close the modal
+  };
+
   const handleTap = (meal: { id: number; name: string }) => {
     setEditingMeal({ id: meal.id, name: meal.name });
   };
@@ -58,20 +97,15 @@ export default function Index() {
     }
   };
 
-  const toggleExpandMeal = (id: number) => {
-    setExpandedMealId((prevId) => (prevId === id ? null : id)); // Toggle expand/collapse
-  };
-
-  
-  
-
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
         <View style={styles.headerContainer}>
           <View style={{ alignItems: 'center', marginTop: 15 }}>
             <Text style={styles.smallText}>Wednesday 18th December</Text>
-            <Text style={[styles.bigText, { marginTop: 10 }]}>{dailyTotals.calories} kcal / 1500 kcal</Text>
+            <Text style={[styles.bigText, { marginTop: 10 }]}>
+              {dailyTotals.calories} kcal / 1500 kcal
+            </Text>
           </View>
           <View style={styles.headerInfo}>
             <View>
@@ -91,88 +125,152 @@ export default function Index() {
             </View>
           </View>
         </View>
-        <View style={{ flex: 6, backgroundColor: '#FFFFFF', borderTopLeftRadius: 70, borderTopRightRadius: 70, marginTop: 10, paddingBottom: 90 }}>
+        <View
+          style={{
+            flex: 6,
+            backgroundColor: '#FFFFFF',
+            borderTopLeftRadius: 70,
+            borderTopRightRadius: 70,
+            marginTop: 10,
+            paddingBottom: 90,
+          }}
+        >
           <View style={styles.dayNav}>
             <Text>Yesterday</Text>
             <Text>Today</Text>
             <Text>Tomorrow</Text>
           </View>
-          
-            {/* Display meals */}
-            <FlatList
-              data={meals} // The data to be displayed
-              keyExtractor={(meal) => meal.id.toString()} 
-              renderItem={({ item: meal }) => (
-                <TouchableWithoutFeedback>
-                  <View style={styles.mealContainer}>
-                    <View style={styles.mealInfo}>
-                      <View>
-                        <View style={styles.mealInfoName}>
-                          <TouchableWithoutFeedback onPress={() => toggleExpandMeal(meal.id)}>
-                            <Text style={styles.expandText}>{expandedMealId === meal.id ? '▲' : '▼'}</Text>
-                          </TouchableWithoutFeedback>
-                          <TouchableWithoutFeedback
-                            onPress={() => handleTap(meal)}
-                            delayLongPress={300}
-                          >
-                            {editingMeal?.id === meal.id ? (
-                              <TextInput
-                                value={editingMeal.name}
-                                onChangeText={handleNameChange}
-                                onBlur={saveName}
-                                autoFocus
-                                style={[styles.input, { fontFamily: 'OpenSans_400Regular' }]}
-                              />
-                            ) : (
-                              <Text style={{ fontFamily: 'OpenSans_400Regular' }}>{meal.name}</Text>
-                            )}
-                          </TouchableWithoutFeedback>
-                        </View>
-                        <View style={styles.mealInfoMacros}>
-                          <View style={[styles.circle, { backgroundColor: '#C889CD' }]} />
-                          <Text style={styles.macrosText}>{meal.carbs}</Text>
-                          <View style={[styles.circle, { backgroundColor: '#89B5CD' }]} />
-                          <Text style={styles.macrosText}>{meal.fat}</Text>
-                          <View style={[styles.circle, { backgroundColor: '#CD8A89' }]} />
-                          <Text style={styles.macrosText}>{meal.protein}</Text>
-                        </View>
+          <FlatList
+            data={meals}
+            keyExtractor={(meal) => meal.id.toString()}
+            renderItem={({ item: meal }) => (
+              <TouchableWithoutFeedback>
+                <View style={styles.mealContainer}>
+                  <View style={styles.mealInfo}>
+                    <View>
+                      <View style={styles.mealInfoName}>
+                        <TouchableWithoutFeedback onPress={() => toggleExpandMeal(meal.id)}>
+                          <Text style={styles.expandText}>
+                            {expandedMealId === meal.id ? '▲' : '▼'}
+                          </Text>
+                        </TouchableWithoutFeedback>
+                        <TouchableWithoutFeedback
+                          onPress={() => handleTap(meal)}
+                          delayLongPress={300}
+                        >
+                          {editingMeal?.id === meal.id ? (
+                            <TextInput
+                              value={editingMeal.name}
+                              onChangeText={handleNameChange}
+                              onBlur={saveName}
+                              autoFocus
+                              style={[styles.input, { fontFamily: 'OpenSans_400Regular' }]}
+                            />
+                          ) : (
+                            <Text style={{ fontFamily: 'OpenSans_400Regular' }}>
+                              {meal.name}
+                            </Text>
+                          )}
+                        </TouchableWithoutFeedback>
                       </View>
-
-                      <View>
-                        <Text style={{ fontFamily: 'OpenSans_400Regular' }}>{meal.calories}</Text>
-                        <CustomButton
-                          label="Add Food"
-                          onPress={() => router.push({ pathname: "/add-food", params: { mealId: meal.id } })}
-                        />
+                      <View style={styles.mealInfoMacros}>
+                        <View style={[styles.circle, { backgroundColor: '#C889CD' }]} />
+                        <Text style={styles.macrosText}>{meal.carbs}</Text>
+                        <View style={[styles.circle, { backgroundColor: '#89B5CD' }]} />
+                        <Text style={styles.macrosText}>{meal.fat}</Text>
+                        <View style={[styles.circle, { backgroundColor: '#CD8A89' }]} />
+                        <Text style={styles.macrosText}>{meal.protein}</Text>
                       </View>
                     </View>
-                    
-                    {expandedMealId === meal.id && (
-                      <View>
-                        {meal.foods.length > 0 ? (
-                          meal.foods.map((food: string | number | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | null | undefined, index: React.Key | null | undefined) => (
-                            <Text key={index} style={[styles.foodItem, { fontFamily: 'OpenSans_400Regular' }]}>
-                              {food}
-                            </Text>
-                          ))
-                        ) : (
-                          <Text>No foods logged</Text>
-                        )}
-                      </View>
-                    )}
+
+                    <View>
+                      <Text style={{ fontFamily: 'OpenSans_400Regular' }}>{meal.calories}</Text>
+                      <CustomButton
+                        label="Add Food"
+                        onPress={() =>
+                          router.push({ pathname: '/add-food', params: { mealId: meal.id } })
+                        }
+                      />
+                    </View>
                   </View>
-                </TouchableWithoutFeedback>
-              )}
-              ListFooterComponent={
-                <View style={styles.addMealBtn}>
-              <CustomButton label="Add meal" onPress={() => setMeals([...meals, { id: meals.length + 1, name: `Meal`, carbs: '0g', fat: '0g', protein: '0g', calories: '0 kcal', foods: [] }])} />
-            </View>
-              }
-            />
-            
-            
-          
+
+                  {/* Show foods in meal */}
+                  {expandedMealId === meal.id && (
+                    <View>
+                      {meal.foods.map((food, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          onPress={() => handleSelectFood(meal.id, food)}
+                        >
+                          <Text style={[styles.foodItem, { fontFamily: 'OpenSans_400Regular' }]}>
+                            {food}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              </TouchableWithoutFeedback>
+            )}
+            ListFooterComponent={
+              <View style={styles.addMealBtn}>
+                <CustomButton
+                  label="Add meal"
+                  onPress={() =>
+                    setMeals([
+                      ...meals,
+                      {
+                        id: meals.length + 1,
+                        name: `Meal`,
+                        carbs: '0g',
+                        fat: '0g',
+                        protein: '0g',
+                        calories: '0 kcal',
+                        foods: [],
+                      },
+                    ])
+                  }
+                />
+              </View>
+            }
+          />
         </View>
+
+        {/* Modal for editing food */}
+        <Modal visible={!!selectedFood} animationType="slide">
+          <View style={styles.modalContainer}>
+            {selectedFood && (
+              <>
+                <Text style={styles.mediumText}>
+                  {selectedFood.foodName} (Current Weight: {customWeight}g)
+                </Text>
+                <TextInput
+                  keyboardType="numeric"
+                  value={String(customWeight)}
+                  onChangeText={(value) => setCustomWeight(Number(value))}
+                  placeholder="Enter weight in grams"
+                  style={styles.modalTextInput}
+                />
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    onPress={() =>
+                      updateFoodInMeal(
+                        selectedFood.mealId,
+                        selectedFood.foodName,
+                        customWeight
+                      )
+                    }
+                  >
+                    <Text style={styles.buttonText}>Save</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setSelectedFood(null)}>
+                    <Text style={styles.buttonText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </Modal>
       </View>
     </TouchableWithoutFeedback>
   );
@@ -274,5 +372,37 @@ const styles = StyleSheet.create({
     backgroundColor: '#F4E3E3',
     marginTop: 1,
     padding: 5
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignContent: 'center',
+    padding: 20,
+  },
+  mediumText: {
+    fontSize: 18,
+    fontFamily: 'OpenSans_700Bold',
+    marginBottom: 10,
+  },
+  modalTextInput: {
+    height: 40,
+    borderColor: '#CCC',
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    fontSize: 16,
+    fontFamily: 'OpenSans_400Regular',
+    width: '100%',
+    marginBottom: 15,
+  },
+  buttonText: {
+    fontSize: 14,
+    fontFamily: 'OpenSans_400Regular',
+    margin: 3
+  },
+  modalButtons: {
+    marginTop: 10,
+    flexDirection: 'column',
+    alignItems: 'center'
   },
 });

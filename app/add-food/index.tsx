@@ -13,7 +13,34 @@ import {
 import { useMeals } from '../context/MealsContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import searchFoods from '@/lib/fatsecret';
+import { OpenSans_600SemiBold, OpenSans_700Bold } from '@expo-google-fonts/open-sans';
+import { parse } from '@babel/core';
+export const parseNutritionalInfo = (foodDescription: string) => {
+  const regex =
+    /Calories:\s*(\d+)[^\|]*\|\s*Fat:\s*([\d.]+)g[^\|]*\|\s*Carbs:\s*([\d.]+)g[^\|]*\|\s*Protein:\s*([\d.]+)g/;
+  const match = regex.exec(foodDescription);
 
+  if (match) {
+    return {
+      calories: parseInt(match[1], 10) || 0,
+      fat: parseFloat(match[2]) || 0,
+      carbs: parseFloat(match[3]) || 0,
+      protein: parseFloat(match[4]) || 0,
+    };
+  }
+
+  return { calories: 0, fat: 0, carbs: 0, protein: 0 };
+};
+
+export const adjustNutritionForWeight = (nutrition: any, weight: number) => {
+  const scaleFactor = weight / 100; // Assuming default serving is 100g
+  return {
+    calories: Math.round(nutrition.calories * scaleFactor),
+    fat: (nutrition.fat * scaleFactor).toFixed(2),
+    carbs: (nutrition.carbs * scaleFactor).toFixed(2),
+    protein: (nutrition.protein * scaleFactor).toFixed(2),
+  };
+};
 export default function AddFoodScreen() {
   const [query, setQuery] = useState<string>('');
   const [foods, setFoods] = useState<any[]>([]);
@@ -47,64 +74,43 @@ export default function AddFoodScreen() {
     }
   };
 
-  const parseNutritionalInfo = (foodDescription: string) => {
-    const regex =
-      /Calories:\s*(\d+)[^\|]*\|\s*Fat:\s*([\d.]+)g[^\|]*\|\s*Carbs:\s*([\d.]+)g[^\|]*\|\s*Protein:\s*([\d.]+)g/;
-    const match = regex.exec(foodDescription);
-
-    if (match) {
-      return {
-        calories: parseInt(match[1], 10) || 0,
-        fat: parseFloat(match[2]) || 0,
-        carbs: parseFloat(match[3]) || 0,
-        protein: parseFloat(match[4]) || 0,
-      };
-    }
-
-    return { calories: 0, fat: 0, carbs: 0, protein: 0 };
-  };
-
-  const adjustNutritionForWeight = (nutrition: any, weight: number) => {
-    const scaleFactor = weight / 100; // Assuming default serving is 100g
-    return {
-      calories: Math.round(nutrition.calories * scaleFactor),
-      fat: (nutrition.fat * scaleFactor).toFixed(2),
-      carbs: (nutrition.carbs * scaleFactor).toFixed(2),
-      protein: (nutrition.protein * scaleFactor).toFixed(2),
-    };
-  };
+  
 
   const handleSelectFood = (food: any) => {
     setSelectedFood(food);
   };
 
   const addFoodToMeal = (food: any, customWeight = 100) => {
-  const nutritionalInfo = parseNutritionalInfo(food.food_description);
-  const adjustedNutrition = adjustNutritionForWeight(nutritionalInfo, customWeight);
+    const nutritionalInfo = parseNutritionalInfo(food.food_description);
+    const adjustedNutrition = adjustNutritionForWeight(nutritionalInfo, customWeight);
 
-  setMeals((prevMeals) => {
-    const updatedMeals = prevMeals.map((meal) => {
-      if (meal.id === Number(mealId)) {
-        return {
-          ...meal,
-          foods: [...meal.foods, food.food_name],
-          calories: `${Math.round(parseInt(meal.calories) + adjustedNutrition.calories)} kcal`,
-          carbs: `${Math.round(parseFloat(meal.carbs) + Number(adjustedNutrition.carbs))}g`,
-          fat: `${Math.round(parseFloat(meal.fat) + Number(adjustedNutrition.fat))}g`,
-          protein: `${Math.round(parseFloat(meal.protein) + Number(adjustedNutrition.protein))}g`,
-        };
-      }
-      return meal;
+    setMeals((prevMeals) => {
+      const updatedMeals = prevMeals.map((meal) => {
+        if (meal.id === Number(mealId)) {
+          return {
+            ...meal,
+            foods: [...meal.foods, food.food_name],
+            calories: `${Math.round(parseInt(meal.calories) + adjustedNutrition.calories)} kcal`,
+            carbs: `${Math.round(parseFloat(meal.carbs) + Number(adjustedNutrition.carbs))}g`,
+            fat: `${Math.round(parseFloat(meal.fat) + Number(adjustedNutrition.fat))}g`,
+            protein: `${Math.round(parseFloat(meal.protein) + Number(adjustedNutrition.protein))}g`,
+          };
+        }
+        return meal;
+      });
+      return updatedMeals;
     });
-    return updatedMeals;
-  });
 
-  if (selectedFood) setSelectedFood(null); // Close the modal if used
-};
+    if (selectedFood) setSelectedFood(null); // Close the modal if used
+  };
+
+  
+
 
 
   return (
     <View style={{ padding: 16 }}>
+      {/* Search for food item */}
       <Text style={{ fontSize: 18, fontWeight: 'bold', fontFamily: 'OpenSans_400Regular' }}>Search for a food</Text>
       <TextInput
         value={query}
@@ -120,7 +126,12 @@ export default function AddFoodScreen() {
           fontFamily: 'OpenSans_400Regular'
         }}
       />
-      <Button title="Search" onPress={handleSearch} disabled={loading} />
+      <View style={styles.modalButtons}>
+        <TouchableOpacity onPress={handleSearch} disabled={loading}>
+          <Text style={styles.searchText}>Search</Text>
+        </TouchableOpacity>
+      </View>
+      
       {loading && <ActivityIndicator size="large" color="#0000ff" />}
       <View style={{paddingBottom: 250}}>
         <FlatList
@@ -147,31 +158,39 @@ export default function AddFoodScreen() {
 
       {/* Modal for custom gram entry */}
       <Modal visible={!!selectedFood} animationType="slide">
-        <View style={{ padding: 16 }}>
-          {selectedFood && (
-            <>
-              <Text style={{ fontSize: 18, fontWeight: 'bold' }}>
-                {selectedFood.food_name}
-              </Text>
-              <Text>{selectedFood.food_description}</Text>
-              <TextInput
-                keyboardType="numeric"
-                value={String(customWeight)}
-                onChangeText={(value) => setCustomWeight(Number(value))}
-                placeholder="Enter weight in grams"
-                style={{
-                  height: 40,
-                  borderColor: '#ccc',
-                  borderWidth: 1,
-                  marginTop: 10,
-                  paddingLeft: 10,
-                  borderRadius: 5,
-                }}
-              />
-              <Button title="Add to Meal" onPress={() => addFoodToMeal(selectedFood, customWeight)} />
-              <Button title="Cancel" onPress={() => setSelectedFood(null)} />
-            </>
-          )}
+        <View style={styles.modalContainer}>
+          <View style={styles.modalInfo}>
+            {selectedFood && (
+              <>
+                <Text style={styles.mediumText}>
+                  {selectedFood.food_name}
+                </Text>
+                <Text style={styles.modalText}>
+                  Calories: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.food_description),customWeight).calories} kcal{`\n`}
+                  Carbs: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.food_description),customWeight).carbs} g{`\n`}
+                  Fat: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.food_description),customWeight).fat} g{`\n`}
+                  Protein: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.food_description),customWeight).protein} g{`\n`}
+                </Text>
+                <TextInput
+                  keyboardType="numeric"
+                  value={String(customWeight)}
+                  onChangeText={(value) => setCustomWeight(Number(value))}
+                  placeholder="Enter weight in grams"
+                  style={styles.modalTextInput}
+                />
+                
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity onPress={() => addFoodToMeal(selectedFood, customWeight)}>
+                    <Text style={styles.buttonText}>Add to Meal</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setSelectedFood(null)}>
+                    <Text style={styles.buttonText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+                
+              </>
+            )}
+          </View>
         </View>
       </Modal>
     </View>
@@ -184,9 +203,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 10,
-    paddingHorizontal: 10,
+    paddingHorizontal: 15,
     backgroundColor: '#D6CECE',
-    marginBottom: 5
+    marginBottom: 5,
+    borderRadius: 5
   },
   foodItem: {
     marginBottom: 5,
@@ -195,5 +215,47 @@ const styles = StyleSheet.create({
   smallText: {
     fontSize: 10,
     fontFamily: 'OpenSans_400Regular'
+  },
+  mediumText: {
+    fontSize: 18,
+    fontFamily: 'OpenSans_700Bold',
+    marginBottom: 5,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignContent: 'center',
+    padding: 20,
+  },
+  modalInfo: {
+    backgroundColor: '#D6CECE',
+    padding: 16,
+    borderRadius: 5,
+  },
+  modalTextInput: {
+    height: 40,
+    borderColor: 'black',
+    borderWidth: 1,
+    paddingLeft: 10,
+    borderRadius: 5,
+  },
+  modalText: {
+    fontSize: 13,
+    fontFamily: 'OpenSans_400Regular'
+  },
+  buttonText: {
+    fontSize: 14,
+    fontFamily: 'OpenSans_400Regular',
+    margin: 3
+  },
+  modalButtons: {
+    marginTop: 10,
+    flexDirection: 'column',
+    alignItems: 'center'
+  },
+  searchText: {
+    fontSize: 16,
+    fontFamily: 'OpenSans_400Regular', 
+    marginBottom: 10
   },
 })
