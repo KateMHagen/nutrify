@@ -18,7 +18,7 @@ export default function Index() {
   const { meals, setMeals } = useMeals(); // Access meals and setMeals from context
   const [editingMeal, setEditingMeal] = useState<{ id: number; name: string } | null>(null);
   const [expandedMealId, setExpandedMealId] = useState<number | null>(null);
-  const [selectedFood, setSelectedFood] = useState<{ mealId: number; foodName: string } | null>(null);
+  const [selectedFood, setSelectedFood] = useState<{ mealId: number; foodName: string, weight: number } | null>(null);
   const [customWeight, setCustomWeight] = useState<number>(100);
 
   const [dailyTotals, setDailyTotals] = useState({
@@ -52,8 +52,8 @@ export default function Index() {
     setExpandedMealId((prevId) => (prevId === id ? null : id)); // Toggle expand/collapse
   };
 
-  const handleSelectFood = (mealId: number, foodName: string) => {
-    setSelectedFood({ mealId, foodName });
+  const handleSelectFood = (mealId: number, foodName: string, weight: number) => {
+    setSelectedFood({ mealId, foodName, weight });
   };
 
   const updateFoodInMeal = (mealId: number, foodName: string, weight: number) => {
@@ -63,8 +63,8 @@ export default function Index() {
           return {
             ...meal,
             foods: meal.foods.map((food) =>
-              food === foodName
-                ? `${foodName} (${weight}g)` // Update food name with weight
+              food.foodName === foodName
+                ? { ...food, weight } // Update the food's weight
                 : food
             ),
           };
@@ -74,6 +74,7 @@ export default function Index() {
     );
     setSelectedFood(null); // Close the modal
   };
+  
 
   const handleTap = (meal: { id: number; name: string }) => {
     setEditingMeal({ id: meal.id, name: meal.name });
@@ -200,10 +201,10 @@ export default function Index() {
                       {meal.foods.map((food, index) => (
                         <TouchableOpacity
                           key={index}
-                          onPress={() => handleSelectFood(meal.id, food)}
+                          onPress={() => handleSelectFood(meal.id, food.foodName, food.weight)}
                         >
                           <Text style={[styles.foodItem, { fontFamily: 'OpenSans_400Regular' }]}>
-                            {food}
+                            {food.foodName}
                           </Text>
                         </TouchableOpacity>
                       ))}
@@ -237,40 +238,46 @@ export default function Index() {
         </View>
 
         {/* Modal for editing food */}
-        <Modal visible={!!selectedFood} animationType="slide">
-          <View style={styles.modalContainer}>
-            {selectedFood && (
-              <>
-                <Text style={styles.mediumText}>
-                  {selectedFood.foodName} (Current Weight: {customWeight}g)
-                </Text>
-                <TextInput
-                  keyboardType="numeric"
-                  value={String(customWeight)}
-                  onChangeText={(value) => setCustomWeight(Number(value))}
-                  placeholder="Enter weight in grams"
-                  style={styles.modalTextInput}
-                />
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity
-                    onPress={() =>
-                      updateFoodInMeal(
-                        selectedFood.mealId,
-                        selectedFood.foodName,
-                        customWeight
-                      )
-                    }
-                  >
-                    <Text style={styles.buttonText}>Save</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => setSelectedFood(null)}>
-                    <Text style={styles.buttonText}>Cancel</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
-          </View>
-        </Modal>
+        {/* Modal for editing food */}
+<Modal visible={!!selectedFood} animationType="slide">
+  <View style={styles.modalContainer}>
+    {selectedFood && (
+      <>
+        <Text style={styles.mediumText}>
+          {selectedFood.foodName} (Current Weight: {selectedFood.weight}g)
+        </Text>
+        <TextInput
+          keyboardType="numeric"
+          value={String(selectedFood.weight)}
+          onChangeText={(value) =>
+            setSelectedFood((prev) =>
+              prev ? { ...prev, weight: Number(value) } : null
+            )
+          }
+          placeholder="Enter weight in grams"
+          style={styles.modalTextInput}
+        />
+        <View style={styles.modalButtons}>
+          <TouchableOpacity
+            onPress={() =>
+              updateFoodInMeal(
+                selectedFood.mealId,
+                selectedFood.foodName,
+                selectedFood.weight
+              )
+            }
+          >
+            <Text style={styles.buttonText}>Save</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setSelectedFood(null)}>
+            <Text style={styles.buttonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </>
+    )}
+  </View>
+</Modal>
+
       </View>
     </TouchableWithoutFeedback>
   );

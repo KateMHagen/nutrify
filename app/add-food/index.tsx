@@ -14,7 +14,8 @@ import { useMeals } from '../context/MealsContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import searchFoods from '@/lib/fatsecret';
 import { OpenSans_600SemiBold, OpenSans_700Bold } from '@expo-google-fonts/open-sans';
-import { parse } from '@babel/core';
+
+// Helper functions for nutrition parsing and adjustment
 export const parseNutritionalInfo = (foodDescription: string) => {
   const regex =
     /Calories:\s*(\d+)[^\|]*\|\s*Fat:\s*([\d.]+)g[^\|]*\|\s*Carbs:\s*([\d.]+)g[^\|]*\|\s*Protein:\s*([\d.]+)g/;
@@ -41,6 +42,7 @@ export const adjustNutritionForWeight = (nutrition: any, weight: number) => {
     protein: (nutrition.protein * scaleFactor).toFixed(2),
   };
 };
+
 export default function AddFoodScreen() {
   const [query, setQuery] = useState<string>('');
   const [foods, setFoods] = useState<any[]>([]);
@@ -74,8 +76,6 @@ export default function AddFoodScreen() {
     }
   };
 
-  
-
   const handleSelectFood = (food: any) => {
     setSelectedFood(food);
   };
@@ -89,7 +89,7 @@ export default function AddFoodScreen() {
         if (meal.id === Number(mealId)) {
           return {
             ...meal,
-            foods: [...meal.foods, food.food_name],
+            foods: [...meal.foods, { foodName: food.food_name, weight: customWeight }], // Add food with weight
             calories: `${Math.round(parseInt(meal.calories) + adjustedNutrition.calories)} kcal`,
             carbs: `${Math.round(parseFloat(meal.carbs) + Number(adjustedNutrition.carbs))}g`,
             fat: `${Math.round(parseFloat(meal.fat) + Number(adjustedNutrition.fat))}g`,
@@ -103,10 +103,6 @@ export default function AddFoodScreen() {
 
     if (selectedFood) setSelectedFood(null); // Close the modal if used
   };
-
-  
-
-
 
   return (
     <View style={{ padding: 16 }}>
@@ -131,23 +127,18 @@ export default function AddFoodScreen() {
           <Text style={styles.searchText}>Search</Text>
         </TouchableOpacity>
       </View>
-      
+
       {loading && <ActivityIndicator size="large" color="#0000ff" />}
-      <View style={{paddingBottom: 250}}>
+      <View style={{ paddingBottom: 250 }}>
         <FlatList
           data={foods}
           keyExtractor={(item) => item.food_id.toString()}
           renderItem={({ item }) => (
-            <View
-              style={styles.foodItemContainer}
-            >
-              {/* List of searched food items */}
-              {/* Click food item to see nutrition info, and can change serving grams */}
+            <View style={styles.foodItemContainer}>
               <TouchableOpacity onPress={() => handleSelectFood(item)}>
                 <Text style={styles.foodItem}>{item.food_name}</Text>
                 <Text style={styles.smallText}>{item.food_description}</Text>
               </TouchableOpacity>
-              {/* Instant Add Button */}
               <TouchableOpacity onPress={() => addFoodToMeal(item)}>
                 <Text style={{ color: 'green', fontSize: 18 }}>+</Text>
               </TouchableOpacity>
@@ -166,10 +157,10 @@ export default function AddFoodScreen() {
                   {selectedFood.food_name}
                 </Text>
                 <Text style={styles.modalText}>
-                  Calories: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.food_description),customWeight).calories} kcal{`\n`}
-                  Carbs: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.food_description),customWeight).carbs} g{`\n`}
-                  Fat: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.food_description),customWeight).fat} g{`\n`}
-                  Protein: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.food_description),customWeight).protein} g{`\n`}
+                  Calories: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.food_description), customWeight).calories} kcal{`\n`}
+                  Carbs: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.food_description), customWeight).carbs} g{`\n`}
+                  Fat: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.food_description), customWeight).fat} g{`\n`}
+                  Protein: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.food_description), customWeight).protein} g{`\n`}
                 </Text>
                 <TextInput
                   keyboardType="numeric"
@@ -178,7 +169,7 @@ export default function AddFoodScreen() {
                   placeholder="Enter weight in grams"
                   style={styles.modalTextInput}
                 />
-                
+
                 <View style={styles.modalButtons}>
                   <TouchableOpacity onPress={() => addFoodToMeal(selectedFood, customWeight)}>
                     <Text style={styles.buttonText}>Add to Meal</Text>
@@ -187,7 +178,6 @@ export default function AddFoodScreen() {
                     <Text style={styles.buttonText}>Cancel</Text>
                   </TouchableOpacity>
                 </View>
-                
               </>
             )}
           </View>

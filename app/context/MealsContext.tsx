@@ -1,5 +1,11 @@
 import React, { createContext, useState, useContext } from 'react';
 
+// Define the type for a food item
+type Food = {
+  foodName: string;
+  weight: number; // Weight of the food in grams
+};
+
 // Define the type for a meal
 type Meal = {
   id: number;
@@ -8,7 +14,7 @@ type Meal = {
   fat: string;
   protein: string;
   calories: string;
-  foods: string[];
+  foods: Food[]; // Array of food items
 };
 
 // Define the context type
@@ -22,9 +28,9 @@ const MealsContext = createContext<MealsContextType | undefined>(undefined);
 
 // Default meals
 const defaultMeals: Meal[] = [
-  { id: 1, name: 'Breakfast', foods: [], calories: '0 kcal',carbs: '0g', fat: '0g', protein: '0g' },
-  { id: 2, name: 'Lunch', foods: [], calories: '0 kcal',carbs: '0g', fat: '0g', protein: '0g' },
-  { id: 3, name: 'Dinner', foods: [], calories: '0 kcal',carbs: '0g', fat: '0g', protein: '0g' },
+  { id: 1, name: 'Breakfast', foods: [], calories: '0 kcal', carbs: '0g', fat: '0g', protein: '0g' },
+  { id: 2, name: 'Lunch', foods: [], calories: '0 kcal', carbs: '0g', fat: '0g', protein: '0g' },
+  { id: 3, name: 'Dinner', foods: [], calories: '0 kcal', carbs: '0g', fat: '0g', protein: '0g' },
 ];
 
 // Create the provider component
