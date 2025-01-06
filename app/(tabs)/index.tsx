@@ -231,14 +231,18 @@ export default function Index() {
                   {expandedMealId === meal.id && (
                     <View>
                       {meal.foods.map((food, index) => (
-                        <TouchableOpacity
-                          key={index}
-                          onPress={() => handleSelectFood(meal.id, food.foodName, food.foodId, food.weight)}
-                        >
-                          <Text style={[styles.foodItem, { fontFamily: 'OpenSans_400Regular' }]}>
-                            {food.foodName}
-                          </Text>
-                        </TouchableOpacity>
+                        <View style={styles.foodItem}>
+                          <TouchableOpacity
+                            key={index}
+                            onPress={() => handleSelectFood(meal.id, food.foodName, food.foodId, food.weight)}
+                          >
+                            <View style={{flexDirection: 'row'}}>
+                              <View><Text style={styles.foodItemText}>{food.foodName}</Text></View>
+                              
+                            </View>
+                          </TouchableOpacity>
+                          <Text style={[styles.foodItemText,{marginLeft: 'auto'}]}>{Math.round(food.calories)} kcal x</Text>
+                        </View>
                       ))}
                     </View>
                   )}
@@ -411,12 +415,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#888',
   },
-  foodItem: {
+  foodItemText: {
     fontSize: 16,
     color: '#555',
+    fontFamily: 
+    'OpenSans_400Regular'
+  },
+  foodItem: {
     backgroundColor: '#F4E3E3',
+    width: '98%',
     marginTop: 1,
-    padding: 5
+    padding: 5,
+    flexDirection: 'row',
+    justifyContent: 'space-between'
   },
   modalContainer: {
     flex: 1,
