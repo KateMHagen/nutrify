@@ -14,11 +14,12 @@ import { CustomButton } from "../components/CustomButton";
 import { router } from 'expo-router';
 import { useMeals } from '../context/MealsContext';
 
+
 export default function Index() {
   const { meals, setMeals } = useMeals(); // Access meals and setMeals from context
   const [editingMeal, setEditingMeal] = useState<{ id: number; name: string } | null>(null);
   const [expandedMealId, setExpandedMealId] = useState<number | null>(null);
-  const [selectedFood, setSelectedFood] = useState<{ mealId: number; foodName: string, weight: number } | null>(null);
+  const [selectedFood, setSelectedFood] = useState<{ mealId: number; foodName: string, foodId: number, weight: number } | null>(null);
   const [customWeight, setCustomWeight] = useState<number>(100);
 
   const [dailyTotals, setDailyTotals] = useState({
@@ -30,6 +31,7 @@ export default function Index() {
 
   // Calculate daily totals
   useEffect(() => {
+
     const totals = meals.reduce(
       (acc, meal) => {
         acc.calories += parseInt(meal.calories) || 0;
@@ -40,6 +42,7 @@ export default function Index() {
       },
       { calories: 0, carbs: 0, fat: 0, protein: 0 }
     );
+  
     setDailyTotals({
       calories: Math.round(totals.calories),
       carbs: Math.round(totals.carbs),
@@ -47,33 +50,62 @@ export default function Index() {
       protein: Math.round(totals.protein),
     });
   }, [meals]);
+  
 
   const toggleExpandMeal = (id: number) => {
     setExpandedMealId((prevId) => (prevId === id ? null : id)); // Toggle expand/collapse
   };
 
-  const handleSelectFood = (mealId: number, foodName: string, weight: number) => {
-    setSelectedFood({ mealId, foodName, weight });
+  const handleSelectFood = (mealId: number, foodName: string, foodId: number, weight: number) => {
+    setSelectedFood({ mealId, foodName, foodId, weight });
   };
 
-  const updateFoodInMeal = (mealId: number, foodName: string, weight: number) => {
+  const updateFoodInMeal = (mealId: number, foodId: number, newWeight: number) => {
     setMeals((prevMeals) =>
       prevMeals.map((meal) => {
         if (meal.id === mealId) {
+          const updatedFoods = meal.foods.map((food) => {
+            if (food.foodId === foodId) {
+              const scaleFactor = newWeight / food.weight;
+              return {
+                ...food,
+                weight: newWeight,
+                calories: food.calories * scaleFactor,
+                carbs: food.carbs * scaleFactor,
+                fat: food.fat * scaleFactor,
+                protein: food.protein * scaleFactor,
+              };
+            }
+            return food;
+          });
+  
+          const updatedMealTotals = updatedFoods.reduce(
+            (acc, food) => {
+              acc.calories += food.calories;
+              acc.carbs += food.carbs;
+              acc.fat += food.fat;
+              acc.protein += food.protein;
+              return acc;
+            },
+            { calories: 0, carbs: 0, fat: 0, protein: 0 }
+          );
+  
           return {
             ...meal,
-            foods: meal.foods.map((food) =>
-              food.foodName === foodName
-                ? { ...food, weight } // Update the food's weight
-                : food
-            ),
+            foods: updatedFoods,
+            calories: `${Math.round(updatedMealTotals.calories)} kcal`,
+            carbs: `${Math.round(updatedMealTotals.carbs)}g`,
+            fat: `${Math.round(updatedMealTotals.fat)}g`,
+            protein: `${Math.round(updatedMealTotals.protein)}g`,
           };
         }
         return meal;
       })
     );
+  
     setSelectedFood(null); // Close the modal
   };
+  
   
 
   const handleTap = (meal: { id: number; name: string }) => {
@@ -201,7 +233,7 @@ export default function Index() {
                       {meal.foods.map((food, index) => (
                         <TouchableOpacity
                           key={index}
-                          onPress={() => handleSelectFood(meal.id, food.foodName, food.weight)}
+                          onPress={() => handleSelectFood(meal.id, food.foodName, food.foodId, food.weight)}
                         >
                           <Text style={[styles.foodItem, { fontFamily: 'OpenSans_400Regular' }]}>
                             {food.foodName}
@@ -246,6 +278,12 @@ export default function Index() {
         <Text style={styles.mediumText}>
           {selectedFood.foodName} (Current Weight: {selectedFood.weight}g)
         </Text>
+        {/* <Text >
+                  Calories: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.weight), customWeight).calories} kcal{`\n`}
+                  Carbs: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.weight), customWeight).carbs} g{`\n`}
+                  Fat: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.food_description), customWeight).fat} g{`\n`}
+                  Protein: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.food_description), customWeight).protein} g{`\n`}
+                </Text> */}
         <TextInput
           keyboardType="numeric"
           value={String(selectedFood.weight)}
@@ -262,7 +300,7 @@ export default function Index() {
             onPress={() =>
               updateFoodInMeal(
                 selectedFood.mealId,
-                selectedFood.foodName,
+                selectedFood.foodId,
                 selectedFood.weight
               )
             }
@@ -310,7 +348,7 @@ const styles = StyleSheet.create({
     fontFamily: 'OpenSans_400Regular'
   },
   bigText: {
-    fontSize: 22,
+    fontSize: 20,
     fontFamily: 'OpenSans_700Bold',
   
     

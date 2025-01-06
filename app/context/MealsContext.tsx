@@ -3,7 +3,12 @@ import React, { createContext, useState, useContext } from 'react';
 // Define the type for a food item
 type Food = {
   foodName: string;
-  weight: number; // Weight of the food in grams
+  weight: number;
+  foodId: number;
+  calories: number; // Nutritional data for each food item
+  carbs: number;    // Nutritional data for each food item
+  fat: number;      // Nutritional data for each food item
+  protein: number;  // Nutritional data for each food item
 };
 
 // Define the type for a meal

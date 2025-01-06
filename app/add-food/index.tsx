@@ -80,29 +80,63 @@ export default function AddFoodScreen() {
     setSelectedFood(food);
   };
 
-  const addFoodToMeal = (food: any, customWeight = 100) => {
+  const addFoodToMeal = (food: { food_description: string; food_name: any; }, customWeight = 100) => {
     const nutritionalInfo = parseNutritionalInfo(food.food_description);
-    const adjustedNutrition = adjustNutritionForWeight(nutritionalInfo, customWeight);
-
+    
     setMeals((prevMeals) => {
       const updatedMeals = prevMeals.map((meal) => {
         if (meal.id === Number(mealId)) {
+          // Calculate new foodId
+          const maxFoodId = meal.foods.length > 0 ? Math.max(...meal.foods.map((f) => f.foodId)) : 0;
+          const newFoodId = maxFoodId + 1;
+
+          // Add the new food to the foods array
+          const updatedFoods = [
+            ...meal.foods,
+            {
+              foodName: food.food_name,
+              weight: customWeight,
+              foodId: newFoodId,
+              calories: nutritionalInfo.calories,
+              carbs: nutritionalInfo.carbs,
+              fat: nutritionalInfo.fat,
+              protein: nutritionalInfo.protein,
+            },
+          ];
+
+          // Recalculate meal totals
+          const updatedTotals = updatedFoods.reduce(
+            (acc, food) => {
+              acc.calories += food.calories;
+              acc.carbs += food.carbs;
+              acc.fat += food.fat;
+              acc.protein += food.protein;
+              return acc;
+            },
+            { calories: 0, carbs: 0, fat: 0, protein: 0 }
+          );
+
+          // Return the updated meal
           return {
             ...meal,
-            foods: [...meal.foods, { foodName: food.food_name, weight: customWeight }], // Add food with weight
-            calories: `${Math.round(parseInt(meal.calories) + adjustedNutrition.calories)} kcal`,
-            carbs: `${Math.round(parseFloat(meal.carbs) + Number(adjustedNutrition.carbs))}g`,
-            fat: `${Math.round(parseFloat(meal.fat) + Number(adjustedNutrition.fat))}g`,
-            protein: `${Math.round(parseFloat(meal.protein) + Number(adjustedNutrition.protein))}g`,
+            foods: updatedFoods,
+            calories: `${Math.round(updatedTotals.calories)} kcal`,
+            carbs: `${Math.round(updatedTotals.carbs)}g`,
+            fat: `${Math.round(updatedTotals.fat)}g`,
+            protein: `${Math.round(updatedTotals.protein)}g`,
           };
         }
         return meal;
       });
+      
       return updatedMeals;
     });
 
-    if (selectedFood) setSelectedFood(null); // Close the modal if used
-  };
+    setSelectedFood(null); // Close the modal
+};
+
+
+  
 
   return (
     <View style={{ padding: 16 }}>
