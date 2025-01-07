@@ -106,6 +106,49 @@ export default function Index() {
     setSelectedFood(null); // Close the modal
   };
   
+  const removeFoodFromMeal = (mealId: number, foodName: string, foodId: number, weight: number) => {
+    console.log('removing:', foodName);
+  
+    setMeals((prevMeals) =>
+      prevMeals.map((meal) => {
+        if (meal.id === mealId) {
+          // Filter out the food item being removed
+          const updatedFoods = meal.foods.filter((food) => food.foodId !== foodId);
+  
+          // Recalculate meal totals
+          const updatedTotals = updatedFoods.reduce(
+            (acc, food) => {
+              acc.calories += food.calories;
+              acc.carbs += food.carbs;
+              acc.fat += food.fat;
+              acc.protein += food.protein;
+              return acc;
+            },
+            { calories: 0, carbs: 0, fat: 0, protein: 0 }
+          );
+  
+          // Return the updated meal
+          return {
+            ...meal,
+            foods: updatedFoods,
+            calories: `${Math.round(updatedTotals.calories)} kcal`,
+            carbs: `${Math.round(updatedTotals.carbs)}g`,
+            fat: `${Math.round(updatedTotals.fat)}g`,
+            protein: `${Math.round(updatedTotals.protein)}g`,
+          };
+        }
+        return meal;
+      })
+    );
+  };
+
+  const deleteMeal = (mealId: number) => {
+    console.log('deleting meal', mealId);
+  
+    setMeals((prevMeals) => prevMeals.filter((meal) => meal.id !== mealId));
+  };
+  
+  
   
 
   const handleTap = (meal: { id: number; name: string }) => {
@@ -205,6 +248,7 @@ export default function Index() {
                             </Text>
                           )}
                         </TouchableWithoutFeedback>
+                        
                       </View>
                       <View style={styles.mealInfoMacros}>
                         <View style={[styles.circle, { backgroundColor: '#C889CD' }]} />
@@ -217,7 +261,13 @@ export default function Index() {
                     </View>
 
                     <View>
-                      <Text style={{ fontFamily: 'OpenSans_400Regular' }}>{meal.calories}</Text>
+                      <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
+                        <Text style={{ fontFamily: 'OpenSans_400Regular' }}>{meal.calories}</Text>
+                        
+                        <TouchableOpacity onPress={() => deleteMeal(meal.id)}> 
+                          <Text>x</Text>
+                        </TouchableOpacity>
+                      </View>
                       <CustomButton
                         label="Add Food"
                         onPress={() =>
@@ -241,7 +291,19 @@ export default function Index() {
                               
                             </View>
                           </TouchableOpacity>
-                          <Text style={[styles.foodItemText,{marginLeft: 'auto'}]}>{Math.round(food.calories)} kcal x</Text>
+                          <Text style={[styles.foodItemText,{marginLeft: 'auto'}]}>
+                            {Math.round(food.calories)} kcal 
+                            
+                            <TouchableOpacity 
+                              key={index+1}
+                              onPress={()=> removeFoodFromMeal(meal.id, food.foodName, food.foodId, food.weight)}
+                            >
+                              <View>
+                                <Text>x</Text>
+                              </View>
+                            </TouchableOpacity> 
+                            
+                          </Text>
                         </View>
                       ))}
                     </View>
@@ -258,7 +320,7 @@ export default function Index() {
                       ...meals,
                       {
                         id: meals.length + 1,
-                        name: `Meal`,
+                        name: `Meal ${meals.length+1}`,
                         carbs: '0g',
                         fat: '0g',
                         protein: '0g',
