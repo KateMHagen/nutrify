@@ -3,4 +3,3 @@ food entries, og them blir lagret til den respektive datoen.
 
 
 
-- Legg til Remove Meal button og feature.

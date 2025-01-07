@@ -297,9 +297,8 @@ export default function Index() {
                   {expandedMealId === meal.id && (
                     <View>
                       {meal.foods.map((food, index) => (
-                        <View style={styles.foodItem}>
+                        <View key={food.foodId} style={styles.foodItem}>
                           <TouchableOpacity
-                            key={index}
                             onPress={() => handleSelectFood(meal.id, food.foodName, food.foodId, food.weight)}
                           >
                             <View style={{flexDirection: 'row'}}>
@@ -311,7 +310,6 @@ export default function Index() {
                             {Math.round(food.calories)} kcal 
                             
                             <TouchableOpacity 
-                              key={index+1}
                               onPress={()=> removeFoodFromMeal(meal.id, food.foodName, food.foodId, food.weight)}
                             >
                               <View>
