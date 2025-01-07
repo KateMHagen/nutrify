@@ -20,7 +20,7 @@ export default function Index() {
   const [editingMeal, setEditingMeal] = useState<{ id: number; name: string } | null>(null);
   const [expandedMealId, setExpandedMealId] = useState<number | null>(null);
   const [selectedFood, setSelectedFood] = useState<{ mealId: number; foodName: string, foodId: number, weight: number } | null>(null);
-  const [customWeight, setCustomWeight] = useState<number>(100);
+  const [nextMealId, setNextMealId] = useState<number>(meals.length + 1); 
 
   const [dailyTotals, setDailyTotals] = useState({
     calories: 0,
@@ -58,6 +58,22 @@ export default function Index() {
 
   const handleSelectFood = (mealId: number, foodName: string, foodId: number, weight: number) => {
     setSelectedFood({ mealId, foodName, foodId, weight });
+  };
+
+  const addMeal = () => {
+    setMeals((prevMeals) => [
+      ...prevMeals,
+      {
+        id: nextMealId, // Use the nextMealId for the new meal
+        name: `Meal`,
+        carbs: '0g',
+        fat: '0g',
+        protein: '0g',
+        calories: '0 kcal',
+        foods: [],
+      },
+    ]);
+    setNextMealId((prevId) => prevId + 1); // Increment the nextMealId
   };
 
   const updateFoodInMeal = (mealId: number, foodId: number, newWeight: number) => {
@@ -315,20 +331,7 @@ export default function Index() {
               <View style={styles.addMealBtn}>
                 <CustomButton
                   label="Add meal"
-                  onPress={() =>
-                    setMeals([
-                      ...meals,
-                      {
-                        id: meals.length + 1,
-                        name: `Meal ${meals.length+1}`,
-                        carbs: '0g',
-                        fat: '0g',
-                        protein: '0g',
-                        calories: '0 kcal',
-                        foods: [],
-                      },
-                    ])
-                  }
+                  onPress={addMeal }
                 />
               </View>
             }
