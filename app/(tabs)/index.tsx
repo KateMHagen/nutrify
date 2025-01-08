@@ -10,17 +10,20 @@ import {
   TouchableOpacity,
   Modal,
 } from 'react-native';
-import { CustomButton } from "../components/CustomButton";
-import { router } from 'expo-router';
+import { CustomButton } from '../components/CustomButton';
 import { useMeals } from '../context/MealsContext';
-
+import { router } from 'expo-router';
 
 export default function Index() {
-  const { meals, setMeals } = useMeals(); // Access meals and setMeals from context
+  const { selectedDate, setSelectedDate, getMeals, updateMeals, addMeal } = useMeals(); // Updated context for date-based meals
   const [editingMeal, setEditingMeal] = useState<{ id: number; name: string } | null>(null);
   const [expandedMealId, setExpandedMealId] = useState<number | null>(null);
-  const [selectedFood, setSelectedFood] = useState<{ mealId: number; foodName: string, foodId: number, weight: number } | null>(null);
-  const [nextMealId, setNextMealId] = useState<number>(meals.length + 1); 
+  const [selectedFood, setSelectedFood] = useState<{
+    mealId: number;
+    foodName: string;
+    foodId: number;
+    weight: number;
+  } | null>(null);
 
   const [dailyTotals, setDailyTotals] = useState({
     calories: 0,
@@ -29,9 +32,10 @@ export default function Index() {
     protein: 0,
   });
 
+  const meals = getMeals();
+
   // Calculate daily totals
   useEffect(() => {
-
     const totals = meals.reduce(
       (acc, meal) => {
         acc.calories += parseInt(meal.calories) || 0;
@@ -43,14 +47,34 @@ export default function Index() {
       { calories: 0, carbs: 0, fat: 0, protein: 0 }
     );
   
-    setDailyTotals({
-      calories: Math.round(totals.calories),
-      carbs: Math.round(totals.carbs),
-      fat: Math.round(totals.fat),
-      protein: Math.round(totals.protein),
+    // Only update state if totals have changed to prevent unnecessary renders
+    setDailyTotals((prevTotals) => {
+      const updatedTotals = {
+        calories: Math.round(totals.calories),
+        carbs: Math.round(totals.carbs),
+        fat: Math.round(totals.fat),
+        protein: Math.round(totals.protein),
+      };
+  
+      if (
+        prevTotals.calories !== updatedTotals.calories ||
+        prevTotals.carbs !== updatedTotals.carbs ||
+        prevTotals.fat !== updatedTotals.fat ||
+        prevTotals.protein !== updatedTotals.protein
+      ) {
+        return updatedTotals;
+      }
+  
+      return prevTotals; // No change, so no re-render
     });
   }, [meals]);
   
+
+  const changeDate = (days: number) => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + days);
+    setSelectedDate(newDate.toISOString().split('T')[0]);
+  };
 
   const toggleExpandMeal = (id: number) => {
     setExpandedMealId((prevId) => (prevId === id ? null : id)); // Toggle expand/collapse
@@ -60,112 +84,93 @@ export default function Index() {
     setSelectedFood({ mealId, foodName, foodId, weight });
   };
 
-  const addMeal = () => {
-    setMeals((prevMeals) => [
-      ...prevMeals,
-      {
-        id: nextMealId, // Use the nextMealId for the new meal
-        name: `Meal`,
-        carbs: '0g',
-        fat: '0g',
-        protein: '0g',
-        calories: '0 kcal',
-        foods: [],
-      },
-    ]);
-    setNextMealId((prevId) => prevId + 1); // Increment the nextMealId
-  };
-
   const updateFoodInMeal = (mealId: number, foodId: number, newWeight: number) => {
-    setMeals((prevMeals) =>
-      prevMeals.map((meal) => {
-        if (meal.id === mealId) {
-          const updatedFoods = meal.foods.map((food) => {
-            if (food.foodId === foodId) {
-              const scaleFactor = newWeight / food.weight;
-              return {
-                ...food,
-                weight: newWeight,
-                calories: food.calories * scaleFactor,
-                carbs: food.carbs * scaleFactor,
-                fat: food.fat * scaleFactor,
-                protein: food.protein * scaleFactor,
-              };
-            }
-            return food;
-          });
+    const updatedMeals = meals.map((meal) => {
+      if (meal.id === mealId) {
+        const updatedFoods = meal.foods.map((food) => {
+          if (food.foodId === foodId) {
+            const scaleFactor = newWeight / food.weight;
+            return {
+              ...food,
+              weight: newWeight,
+              calories: Math.round(food.calories * scaleFactor),
+              carbs: Math.round(food.carbs * scaleFactor),
+              fat: Math.round(food.fat * scaleFactor),
+              protein: Math.round(food.protein * scaleFactor),
+            };
+          }
+          return food;
+        });
   
-          const updatedMealTotals = updatedFoods.reduce(
-            (acc, food) => {
-              acc.calories += food.calories;
-              acc.carbs += food.carbs;
-              acc.fat += food.fat;
-              acc.protein += food.protein;
-              return acc;
-            },
-            { calories: 0, carbs: 0, fat: 0, protein: 0 }
-          );
+        const updatedMealTotals = updatedFoods.reduce(
+          (acc, food) => {
+            acc.calories += food.calories;
+            acc.carbs += food.carbs;
+            acc.fat += food.fat;
+            acc.protein += food.protein;
+            return acc;
+          },
+          { calories: 0, carbs: 0, fat: 0, protein: 0 }
+        );
   
-          return {
-            ...meal,
-            foods: updatedFoods,
-            calories: `${Math.round(updatedMealTotals.calories)} kcal`,
-            carbs: `${Math.round(updatedMealTotals.carbs)}g`,
-            fat: `${Math.round(updatedMealTotals.fat)}g`,
-            protein: `${Math.round(updatedMealTotals.protein)}g`,
-          };
-        }
-        return meal;
-      })
-    );
+        return {
+          ...meal,
+          foods: updatedFoods,
+          calories: `${Math.round(updatedMealTotals.calories)} kcal`,
+          carbs: `${Math.round(updatedMealTotals.carbs)}g`,
+          fat: `${Math.round(updatedMealTotals.fat)}g`,
+          protein: `${Math.round(updatedMealTotals.protein)}g`,
+        };
+      }
+      return meal;
+    });
   
+    // Ensure the state is updated to a new reference
+    updateMeals(updatedMeals);
     setSelectedFood(null); // Close the modal
   };
   
-  const removeFoodFromMeal = (mealId: number, foodName: string, foodId: number, weight: number) => {
-    console.log('removing:', foodName);
+
+  const removeFoodFromMeal = (mealId: number, foodId: number) => {
+    const meals = getMeals();
   
-    setMeals((prevMeals) =>
-      prevMeals.map((meal) => {
-        if (meal.id === mealId) {
-          // Filter out the food item being removed
-          const updatedFoods = meal.foods.filter((food) => food.foodId !== foodId);
+    const updatedMeals = meals.map((meal) => {
+      if (meal.id === mealId) {
+        // Remove the food item
+        const updatedFoods = meal.foods.filter((food) => food.foodId !== foodId);
   
-          // Recalculate meal totals
-          const updatedTotals = updatedFoods.reduce(
-            (acc, food) => {
-              acc.calories += food.calories;
-              acc.carbs += food.carbs;
-              acc.fat += food.fat;
-              acc.protein += food.protein;
-              return acc;
-            },
-            { calories: 0, carbs: 0, fat: 0, protein: 0 }
-          );
+        // Recalculate meal totals
+        const updatedTotals = updatedFoods.reduce(
+          (acc, food) => {
+            acc.calories += food.calories;
+            acc.carbs += food.carbs;
+            acc.fat += food.fat;
+            acc.protein += food.protein;
+            return acc;
+          },
+          { calories: 0, carbs: 0, fat: 0, protein: 0 }
+        );
   
-          // Return the updated meal
-          return {
-            ...meal,
-            foods: updatedFoods,
-            calories: `${Math.round(updatedTotals.calories)} kcal`,
-            carbs: `${Math.round(updatedTotals.carbs)}g`,
-            fat: `${Math.round(updatedTotals.fat)}g`,
-            protein: `${Math.round(updatedTotals.protein)}g`,
-          };
-        }
-        return meal;
-      })
-    );
+        return {
+          ...meal,
+          foods: updatedFoods,
+          calories: `${Math.round(updatedTotals.calories)} kcal`,
+          carbs: `${Math.round(updatedTotals.carbs)}g`,
+          fat: `${Math.round(updatedTotals.fat)}g`,
+          protein: `${Math.round(updatedTotals.protein)}g`,
+        };
+      }
+      return meal;
+    });
+  
+    // Update the meals for the current date
+    updateMeals(updatedMeals);
   };
+  
 
   const deleteMeal = (mealId: number) => {
-    console.log('deleting meal', mealId);
-  
-    setMeals((prevMeals) => prevMeals.filter((meal) => meal.id !== mealId));
+    updateMeals(meals.filter((meal) => meal.id !== mealId));
   };
-  
-  
-  
 
   const handleTap = (meal: { id: number; name: string }) => {
     setEditingMeal({ id: meal.id, name: meal.name });
@@ -180,8 +185,8 @@ export default function Index() {
 
   const saveName = () => {
     if (editingMeal) {
-      setMeals((prevMeals) =>
-        prevMeals.map((meal) =>
+      updateMeals(
+        meals.map((meal) =>
           meal.id === editingMeal.id ? { ...meal, name: editingMeal.name } : meal
         )
       );
@@ -194,7 +199,7 @@ export default function Index() {
       <View style={styles.container}>
         <View style={styles.headerContainer}>
           <View style={{ alignItems: 'center', marginTop: 15 }}>
-            <Text style={styles.smallText}>Wednesday 18th December</Text>
+            <Text style={styles.smallText}>{selectedDate}</Text>
             <Text style={[styles.bigText, { marginTop: 10 }]}>
               {dailyTotals.calories} kcal / 1500 kcal
             </Text>
@@ -228,10 +233,15 @@ export default function Index() {
           }}
         >
           <View style={styles.dayNav}>
-            <Text>Yesterday</Text>
+            <TouchableOpacity onPress={() => changeDate(-1)}>
+              <Text>Yesterday</Text>
+            </TouchableOpacity>
             <Text>Today</Text>
-            <Text>Tomorrow</Text>
+            <TouchableOpacity onPress={() => changeDate(1)}>
+              <Text>Tomorrow</Text>
+            </TouchableOpacity>
           </View>
+
           <FlatList
             data={meals}
             keyExtractor={(meal) => meal.id.toString()}
@@ -259,12 +269,9 @@ export default function Index() {
                               style={[styles.input, { fontFamily: 'OpenSans_400Regular' }]}
                             />
                           ) : (
-                            <Text style={{ fontFamily: 'OpenSans_400Regular' }}>
-                              {meal.name}
-                            </Text>
+                            <Text style={{ fontFamily: 'OpenSans_400Regular' }}>{meal.name}</Text>
                           )}
                         </TouchableWithoutFeedback>
-                        
                       </View>
                       <View style={styles.mealInfoMacros}>
                         <View style={[styles.circle, { backgroundColor: '#C889CD' }]} />
@@ -277,10 +284,10 @@ export default function Index() {
                     </View>
 
                     <View>
-                      <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                         <Text style={{ fontFamily: 'OpenSans_400Regular' }}>{meal.calories}</Text>
-                        
-                        <TouchableOpacity onPress={() => deleteMeal(meal.id)}> 
+
+                        <TouchableOpacity onPress={() => deleteMeal(meal.id)}>
                           <Text>x</Text>
                         </TouchableOpacity>
                       </View>
@@ -293,31 +300,31 @@ export default function Index() {
                     </View>
                   </View>
 
-                  {/* Show foods in meal */}
                   {expandedMealId === meal.id && (
                     <View>
-                      {meal.foods.map((food, index) => (
+                      {meal.foods.map((food) => (
                         <View key={food.foodId} style={styles.foodItem}>
                           <TouchableOpacity
-                            onPress={() => handleSelectFood(meal.id, food.foodName, food.foodId, food.weight)}
+                            onPress={() =>
+                              handleSelectFood(meal.id, food.foodName, food.foodId, food.weight)
+                            }
                           >
-                            <View style={{flexDirection: 'row'}}>
-                              <View><Text style={styles.foodItemText}>{food.foodName}</Text></View>
-                              
+                            <View style={{ flexDirection: 'row' }}>
+                              <View>
+                                <Text style={styles.foodItemText}>{food.foodName}</Text>
+                              </View>
                             </View>
                           </TouchableOpacity>
-                          <Text style={[styles.foodItemText,{marginLeft: 'auto'}]}>
-                            {Math.round(food.calories)} kcal 
-                            
-                            <TouchableOpacity 
-                              onPress={()=> removeFoodFromMeal(meal.id, food.foodName, food.foodId, food.weight)}
-                            >
-                              <View>
-                                <Text>x</Text>
-                              </View>
-                            </TouchableOpacity> 
-                            
-                          </Text>
+                          
+                            <Text style={[styles.foodItemText, { marginLeft: 'auto' }]}>
+                              {Math.round(food.calories)} kcal
+                              <TouchableOpacity onPress={() => removeFoodFromMeal(meal.id, food.foodId)}>
+                                
+                                <Text style={{marginLeft: 15}}>x</Text>
+                                
+                              </TouchableOpacity>
+                            </Text>
+  
                         </View>
                       ))}
                     </View>
@@ -327,62 +334,50 @@ export default function Index() {
             )}
             ListFooterComponent={
               <View style={styles.addMealBtn}>
-                <CustomButton
-                  label="Add meal"
-                  onPress={addMeal }
-                />
+                <CustomButton label="Add meal" onPress={addMeal} />
               </View>
             }
           />
         </View>
 
-        {/* Modal for editing food */}
-        {/* Modal for editing food */}
-<Modal visible={!!selectedFood} animationType="slide">
-  <View style={styles.modalContainer}>
-    {selectedFood && (
-      <>
-        <Text style={styles.mediumText}>
-          {selectedFood.foodName} (Current Weight: {selectedFood.weight}g)
-        </Text>
-        {/* <Text >
-                  Calories: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.weight), customWeight).calories} kcal{`\n`}
-                  Carbs: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.weight), customWeight).carbs} g{`\n`}
-                  Fat: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.food_description), customWeight).fat} g{`\n`}
-                  Protein: {adjustNutritionForWeight(parseNutritionalInfo(selectedFood.food_description), customWeight).protein} g{`\n`}
-                </Text> */}
-        <TextInput
-          keyboardType="numeric"
-          value={String(selectedFood.weight)}
-          onChangeText={(value) =>
-            setSelectedFood((prev) =>
-              prev ? { ...prev, weight: Number(value) } : null
-            )
-          }
-          placeholder="Enter weight in grams"
-          style={styles.modalTextInput}
-        />
-        <View style={styles.modalButtons}>
-          <TouchableOpacity
-            onPress={() =>
-              updateFoodInMeal(
-                selectedFood.mealId,
-                selectedFood.foodId,
-                selectedFood.weight
-              )
-            }
-          >
-            <Text style={styles.buttonText}>Save</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setSelectedFood(null)}>
-            <Text style={styles.buttonText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </>
-    )}
-  </View>
-</Modal>
-
+        <Modal visible={!!selectedFood} animationType="slide">
+          <View style={styles.modalContainer}>
+            {selectedFood && (
+              <>
+                <Text style={styles.mediumText}>
+                  {selectedFood.foodName} (Current Weight: {selectedFood.weight}g)
+                </Text>
+                <TextInput
+                  keyboardType="numeric"
+                  value={String(selectedFood.weight)}
+                  onChangeText={(value) =>
+                    setSelectedFood((prev) =>
+                      prev ? { ...prev, weight: Number(value) } : null
+                    )
+                  }
+                  placeholder="Enter weight in grams"
+                  style={styles.modalTextInput}
+                />
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    onPress={() =>
+                      updateFoodInMeal(
+                        selectedFood.mealId,
+                        selectedFood.foodId,
+                        selectedFood.weight
+                      )
+                    }
+                  >
+                    <Text style={styles.buttonText}>Save</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setSelectedFood(null)}>
+                    <Text style={styles.buttonText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </Modal>
       </View>
     </TouchableWithoutFeedback>
   );
@@ -404,26 +399,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 5,
-    
   },
   smallText: {
     fontSize: 12,
-    fontFamily: 'OpenSans_400Regular'
+    fontFamily: 'OpenSans_400Regular',
   },
   medText: {
     fontSize: 12,
-    fontFamily: 'OpenSans_400Regular'
+    fontFamily: 'OpenSans_400Regular',
   },
   bigText: {
     fontSize: 20,
     fontFamily: 'OpenSans_700Bold',
-  
-    
   },
   gramsText: {
     fontSize: 10,
-    fontWeight: '200', 
-    fontFamily: 'OpenSans_300Light,'
+    fontWeight: '200',
+    fontFamily: 'OpenSans_300Light',
   },
   mealContainer: {
     marginLeft: 30,
@@ -448,19 +440,18 @@ const styles = StyleSheet.create({
   macrosText: {
     marginRight: 5,
     fontSize: 12,
-    fontFamily: 'OpenSans_300Light'
+    fontFamily: 'OpenSans_300Light',
   },
   circle: {
-    width: 10, 
-    height: 10, 
+    width: 10,
+    height: 10,
     borderRadius: 10,
-    marginRight: 3, 
+    marginRight: 3,
   },
   addMealBtn: {
     marginTop: 20,
     marginLeft: 30,
     marginRight: 30,
-    
   },
   dayNav: {
     flexDirection: 'row',
@@ -472,7 +463,7 @@ const styles = StyleSheet.create({
     borderColor: '#CCC',
     padding: 5,
     fontSize: 16,
-    fontFamily: 'OpenSans_400Regular'
+    fontFamily: 'OpenSans_400Regular',
   },
   expandText: {
     fontSize: 18,
@@ -481,8 +472,7 @@ const styles = StyleSheet.create({
   foodItemText: {
     fontSize: 16,
     color: '#555',
-    fontFamily: 
-    'OpenSans_400Regular'
+    fontFamily: 'OpenSans_400Regular',
   },
   foodItem: {
     backgroundColor: '#F4E3E3',
@@ -490,7 +480,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
     padding: 5,
     flexDirection: 'row',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
   },
   modalContainer: {
     flex: 1,
@@ -517,11 +507,11 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 14,
     fontFamily: 'OpenSans_400Regular',
-    margin: 3
+    margin: 3,
   },
   modalButtons: {
     marginTop: 10,
     flexDirection: 'column',
-    alignItems: 'center'
+    alignItems: 'center',
   },
 });
