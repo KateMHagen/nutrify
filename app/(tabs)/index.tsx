@@ -71,9 +71,15 @@ export default function Index() {
   
 
   const changeDate = (days: number) => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() + days);
-    setSelectedDate(newDate.toISOString().split('T')[0]);
+    if (days === 0) {
+      // If 0 is passed, set the selectedDate to today's date
+      const today = new Date().toISOString().split('T')[0];
+      setSelectedDate(today);
+    } else {
+      const newDate = new Date(selectedDate);
+      newDate.setDate(newDate.getDate() + days);
+      setSelectedDate(newDate.toISOString().split('T')[0]);
+    }
   };
 
   const toggleExpandMeal = (id: number) => {
@@ -236,7 +242,9 @@ export default function Index() {
             <TouchableOpacity onPress={() => changeDate(-1)}>
               <Text>Yesterday</Text>
             </TouchableOpacity>
-            <Text>Today</Text>
+            <TouchableOpacity onPress={() => changeDate(0)}>
+              <Text>Today</Text>
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => changeDate(1)}>
               <Text>Tomorrow</Text>
             </TouchableOpacity>
