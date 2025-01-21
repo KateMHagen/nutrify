@@ -41,9 +41,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="Goals"
+        name="Progress"
         options={{
-          title: 'Goals',
+          title: 'Progress',
           tabBarIcon: ({ color }) => <AntDesign name="book" size={28} color={color} />,
         }}
       />

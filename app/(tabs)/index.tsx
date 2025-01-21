@@ -13,6 +13,7 @@ import {
 import { CustomButton } from '../components/CustomButton';
 import { useMeals } from '../context/MealsContext';
 import { router } from 'expo-router';
+import AntDesign from '@expo/vector-icons/AntDesign';
 
 export default function Index() {
   const { selectedDate, setSelectedDate, getMeals, updateMeals, addMeal } = useMeals(); // Updated context for date-based meals
@@ -214,17 +215,17 @@ export default function Index() {
             <View>
               <Text style={styles.medText}>Carbs</Text>
               <Text style={styles.gramsText}>{dailyTotals.carbs}g / 120g</Text>
-              <View style={{ height: '5%', backgroundColor: '#C889CD', borderRadius: '5%' }}></View>
+              <View style={{ height: '5%', backgroundColor: '#C889CD', borderRadius: '5%', marginTop: 3 }}></View>
             </View>
             <View>
               <Text style={styles.medText}>Fat</Text>
               <Text style={styles.gramsText}>{dailyTotals.fat}g / 120g</Text>
-              <View style={{ height: '5%', backgroundColor: '#89B5CD', borderRadius: '5%' }}></View>
+              <View style={{ height: '5%', backgroundColor: '#89B5CD', borderRadius: '5%', marginTop: 3 }}></View>
             </View>
             <View>
               <Text style={styles.medText}>Protein</Text>
               <Text style={styles.gramsText}>{dailyTotals.protein}g / 120g</Text>
-              <View style={{ height: '5%', backgroundColor: '#CD8A89', borderRadius: '5%' }}></View>
+              <View style={{ height: '5%', backgroundColor: '#CD8A89', borderRadius: '5%', marginTop: 3 }}></View>
             </View>
           </View>
         </View>
@@ -240,13 +241,13 @@ export default function Index() {
         >
           <View style={styles.dayNav}>
             <TouchableOpacity onPress={() => changeDate(-1)}>
-              <Text>Yesterday</Text>
+              <Text style={styles.dayNavText}>Yesterday</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => changeDate(0)}>
-              <Text>Today</Text>
+              <Text style={styles.dayNavText}>Today</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => changeDate(1)}>
-              <Text>Tomorrow</Text>
+              <Text style={styles.dayNavText}>Tomorrow</Text>
             </TouchableOpacity>
           </View>
 
@@ -296,7 +297,7 @@ export default function Index() {
                         <Text style={{ fontFamily: 'OpenSans_400Regular' }}>{meal.calories}</Text>
 
                         <TouchableOpacity onPress={() => deleteMeal(meal.id)}>
-                          <Text>x</Text>
+                          <Text><AntDesign name="close" size={15} color="black" /></Text>
                         </TouchableOpacity>
                       </View>
                       <CustomButton
@@ -328,7 +329,7 @@ export default function Index() {
                               {Math.round(food.calories)} kcal
                               <TouchableOpacity onPress={() => removeFoodFromMeal(meal.id, food.foodId)}>
                                 
-                                <Text style={{marginLeft: 15}}>x</Text>
+                                <Text style={{marginLeft: 15}}><AntDesign name="close" size={12} color="black" /></Text>
                                 
                               </TouchableOpacity>
                             </Text>
@@ -464,7 +465,11 @@ const styles = StyleSheet.create({
   dayNav: {
     flexDirection: 'row',
     justifyContent: 'center',
-    padding: 10,
+    padding: 10,    
+  },
+  dayNavText: {
+    fontFamily: 'OpenSans_400Regular',
+    marginHorizontal: 10
   },
   input: {
     borderBottomWidth: 1,
@@ -476,6 +481,7 @@ const styles = StyleSheet.create({
   expandText: {
     fontSize: 18,
     color: '#888',
+    marginRight: 5,
   },
   foodItemText: {
     fontSize: 16,
