@@ -1,3 +1,4 @@
+import { CustomButton } from '@/components/CustomButton';
 import supabase from '@/lib/supabase';
 import { router } from 'expo-router';
 import { View, Text, StyleSheet, Button } from 'react-native';
@@ -5,11 +6,14 @@ import { View, Text, StyleSheet, Button } from 'react-native';
 export default function CalorieTracker() {
   return (
     <View style={styles.container}>
-      <Text>Tab [Account]</Text>
-      <Button title="Sign Out"  onPress={async () => {
-        await supabase.auth.signOut();
-        router.replace("../App")
-      }} />
+      <CustomButton
+        label="Sign Out"
+        onPress={async () => {
+          await supabase.auth.signOut();
+          router.replace("../App")
+        }}
+       />
+     
     </View>
   );
 }

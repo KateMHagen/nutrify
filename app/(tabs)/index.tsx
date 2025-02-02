@@ -215,7 +215,7 @@ export default function Index() {
             <View>
               <Text style={styles.medText}>Carbs</Text>
               <Text style={styles.gramsText}>{dailyTotals.carbs}g / 120g</Text>
-              <View style={{ height: '5%', backgroundColor: '#C889CD', borderRadius: '5%', marginTop: 3 }}></View>
+              <View style={{ height: '5%', backgroundColor: '#C889CD', borderRadius: '5%' }}></View>
             </View>
             <View>
               <Text style={styles.medText}>Fat</Text>
@@ -396,11 +396,11 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'column',
     flex: 1,
-    backgroundColor: '#F4E3E3',
+    backgroundColor: '#EAE7F5',
   },
   headerContainer: {
     flex: 1,
-    backgroundColor: '#F4E3E3',
+    backgroundColor: '#EAE7F5',
     width: '70%',
     margin: 'auto',
   },
@@ -430,9 +430,15 @@ const styles = StyleSheet.create({
     marginLeft: 30,
     marginRight: 30,
     marginTop: 20,
-    backgroundColor: '#D6CECE',
+    backgroundColor: '#FBFBFB',
     borderRadius: 10,
     padding: 20,
+    shadowColor: '#EAE7F5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 5,
+    elevation: 5, // For Android
+
   },
   mealInfo: {
     flexDirection: 'row',
@@ -480,7 +486,7 @@ const styles = StyleSheet.create({
   },
   expandText: {
     fontSize: 18,
-    color: '#888',
+    color: 'black',
     marginRight: 5,
   },
   foodItemText: {
@@ -489,12 +495,13 @@ const styles = StyleSheet.create({
     fontFamily: 'OpenSans_400Regular',
   },
   foodItem: {
-    backgroundColor: '#F4E3E3',
+    backgroundColor: '#EAE7F5',
     width: '98%',
     marginTop: 1,
     padding: 5,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    borderRadius: 5
   },
   modalContainer: {
     flex: 1,

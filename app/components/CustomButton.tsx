@@ -17,7 +17,7 @@ export const CustomButton: React.FC<CustomButtonProps> = ({ onPress, label, styl
 
 const styles = StyleSheet.create({
   baseButton: {
-    backgroundColor: "#BAA1A7",
+    backgroundColor: "#9B88FE",
     paddingVertical: 10,
     borderRadius: 8,
     marginVertical: 5,

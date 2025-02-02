@@ -228,9 +228,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 15,
-    backgroundColor: '#D6CECE',
+    backgroundColor: '#EAE7F5',
     marginBottom: 5,
     borderRadius: 5
+    
   },
   foodItem: {
     marginBottom: 5,
@@ -252,7 +253,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalInfo: {
-    backgroundColor: '#D6CECE',
+    backgroundColor: '#EAE7F5',
     padding: 16,
     borderRadius: 5,
   },
