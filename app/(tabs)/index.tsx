@@ -17,15 +17,17 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import supabase from '@/lib/supabase';
 
 export default function Index() {
-  const { selectedDate, setSelectedDate, getMeals, updateMeals, addMeal } = useMeals();
+  const { selectedDate, setSelectedDate, getMeals, updateMeals, addMeal, deleteMeal } = useMeals();
   const [editingMeal, setEditingMeal] = useState<{ id: number; name: string } | null>(null);
   const [expandedMealId, setExpandedMealId] = useState<number | null>(null);
   const [selectedFood, setSelectedFood] = useState<{
     mealId: number;
+    id: number; 
     foodName: string;
     foodId: number;
     weight: number;
   } | null>(null);
+  
 
   const [dailyTotals, setDailyTotals] = useState({
     calories: 0,
@@ -39,36 +41,27 @@ export default function Index() {
 
   // Calculate daily totals
   useEffect(() => {
+    if (!meals || meals.length === 0) return;
+  
     const totals = meals.reduce(
       (acc, meal) => {
-        acc.calories += Number(meal.calories) || 0;
-        acc.carbs += Number(meal.carbs) || 0;
-        acc.fat += Number(meal.fat) || 0;
-        acc.protein += Number(meal.protein) || 0;
+        acc.calories += meal.foods.reduce((sum, food) => sum + food.calories, 0);
+        acc.carbs += meal.foods.reduce((sum, food) => sum + food.carbs, 0);
+        acc.fat += meal.foods.reduce((sum, food) => sum + food.fat, 0);
+        acc.protein += meal.foods.reduce((sum, food) => sum + food.protein, 0);
         return acc;
       },
       { calories: 0, carbs: 0, fat: 0, protein: 0 }
     );
-
-    setDailyTotals((prevTotals) => {
-      const updatedTotals = {
-        calories: Math.round(totals.calories),
-        carbs: Math.round(totals.carbs),
-        fat: Math.round(totals.fat),
-        protein: Math.round(totals.protein),
-      };
-
-      if (
-        prevTotals.calories !== updatedTotals.calories ||
-        prevTotals.carbs !== updatedTotals.carbs ||
-        prevTotals.fat !== updatedTotals.fat ||
-        prevTotals.protein !== updatedTotals.protein
-      ) {
-        return updatedTotals;
-      }
-      return prevTotals;
+  
+    setDailyTotals({
+      calories: Math.round(totals.calories),
+      carbs: Math.round(totals.carbs),
+      fat: Math.round(totals.fat),
+      protein: Math.round(totals.protein),
     });
   }, [meals]);
+  
 
   const changeDate = (days: number) => {
     if (days === 0) {
@@ -85,70 +78,91 @@ export default function Index() {
     setExpandedMealId((prevId) => (prevId === id ? null : id));
   };
 
-  const handleSelectFood = (mealId: number, foodName: string, foodId: number, weight: number) => {
-    setSelectedFood({ mealId, foodName, foodId, weight });
-  };
-
-  // Update food weight and recalc macros locally (the MealsContext updateMeals call will upsert to Supabase)
-  const updateFoodInMeal = (mealId: number, foodId: number, newWeight: number) => {
-    const currentMeals = getMeals();
-    const updatedMeals = currentMeals.map((meal) => {
-      if (meal.id === mealId) {
-        const updatedFoods = meal.foods.map((food) => {
-          if (food.foodId === foodId) {
-            const scaleFactor = newWeight / food.weight;
-            return {
-              ...food,
-              weight: newWeight,
-              calories: Math.round(food.calories * scaleFactor),
-              carbs: Math.round(food.carbs * scaleFactor),
-              fat: Math.round(food.fat * scaleFactor),
-              protein: Math.round(food.protein * scaleFactor),
-            };
-          }
-          return food;
-        });
-        const updatedMealTotals = updatedFoods.reduce(
-          (acc, food) => {
-            acc.calories += food.calories;
-            acc.carbs += food.carbs;
-            acc.fat += food.fat;
-            acc.protein += food.protein;
-            return acc;
-          },
-          { calories: 0, carbs: 0, fat: 0, protein: 0 }
-        );
-        return {
-          ...meal,
-          foods: updatedFoods,
-          calories: Math.round(updatedMealTotals.calories),
-          carbs: Math.round(updatedMealTotals.carbs),
-          fat: Math.round(updatedMealTotals.fat),
-          protein: Math.round(updatedMealTotals.protein),
-        };
-      }
-      return meal;
+  const handleSelectFood = (mealId: number, foodId: number, foodName: string, foodWeight: number) => {
+    setSelectedFood({
+      mealId,
+      id: foodId, 
+      foodName: foodName,
+      foodId: foodId, 
+      weight: foodWeight,
     });
-    updateMeals(updatedMeals);
-    setSelectedFood(null);
-    // Auto-expand this meal so its foods are visible
-    setExpandedMealId(mealId);
   };
+  
+
+  const updateFoodInMeal = async (mealId: number, foodId: number, newWeight: number) => {
+    try {
+      // Find the food item
+      const meal = meals.find(m => m.id === mealId);
+      if (!meal) return;
+  
+      const food = meal.foods.find(f => f.id === foodId);
+      if (!food) return;
+  
+      // Calculate new nutritional values based on weight change
+      const scaleFactor = newWeight / food.weight;
+      const updatedCalories = Math.round(food.calories * scaleFactor);
+      const updatedCarbs = Math.round(food.carbs * scaleFactor);
+      const updatedFat = Math.round(food.fat * scaleFactor);
+      const updatedProtein = Math.round(food.protein * scaleFactor);
+  
+      // Update food item in Supabase
+      const { error } = await supabase
+        .from('meal_foods')
+        .update({
+          weight: newWeight,
+          calories: updatedCalories,
+          carbs: updatedCarbs,
+          fat: updatedFat,
+          protein: updatedProtein,
+        })
+        .eq('id', foodId); // Ensure update targets correct food
+  
+      if (error) {
+        console.error('Error updating food weight:', error.message);
+        return;
+      }
+  
+      // Update UI state
+      const updatedMeals = getMeals().map((meal) => {
+        if (meal.id === mealId) {
+          return {
+            ...meal,
+            foods: meal.foods.map((food) =>
+              food.id === foodId
+                ? { ...food, weight: newWeight, calories: updatedCalories, carbs: updatedCarbs, fat: updatedFat, protein: updatedProtein }
+                : food
+            ),
+          };
+        }
+        return meal;
+      });
+  
+      updateMeals(updatedMeals);
+      setSelectedFood(null); // Close the modal
+  
+    } catch (error) {
+      console.error('Error updating food weight:', error);
+    }
+  };
+  
+  
+  
+  
 
   const removeFoodFromMeal = async (mealId: number, foodId: number) => {
     try {
-      // ✅ Remove food using `id`
+      // Remove food using id
       const { error } = await supabase
         .from('meal_foods')
         .delete()
-        .match({ id: foodId }); // ✅ Use primary key `id`
+        .match({ id: foodId }); 
   
       if (error) {
         console.error('Error removing food:', error.message);
         return;
       }
   
-      // ✅ Update UI to remove only the selected food
+      // Update UI to remove only the selected food
       const updatedMeals = meals.map((meal) => {
         if (meal.id === mealId) {
           return {
@@ -168,10 +182,7 @@ export default function Index() {
   
   
 
-  const deleteMeal = (mealId: number) => {
-    updateMeals(getMeals().filter((meal) => meal.id !== mealId));
-  };
-
+  
   const handleTap = (meal: { id: number; name: string }) => {
     setEditingMeal({ id: meal.id, name: meal.name });
   };
@@ -272,19 +283,32 @@ export default function Index() {
                           )}
                         </TouchableWithoutFeedback>
                       </View>
-                      <View style={styles.mealInfoMacros}>
-                        <View style={[styles.circle, { backgroundColor: '#C889CD' }]} />
-                        <Text style={styles.macrosText}>{meal.carbs}</Text>
-                        <View style={[styles.circle, { backgroundColor: '#89B5CD' }]} />
-                        <Text style={styles.macrosText}>{meal.fat}</Text>
-                        <View style={[styles.circle, { backgroundColor: '#CD8A89' }]} />
-                        <Text style={styles.macrosText}>{meal.protein}</Text>
-                      </View>
+                      
+                        
+                        <View >
+                          
+                            <View style={styles.mealInfoMacros}>
+                            <View style={[styles.circle, { backgroundColor: '#C889CD' }]} />
+                            <Text style={styles.macrosText}>
+                              {Math.round(meal.foods.reduce((total, food) => total + food.carbs, 0))}g
+                            </Text>
+                            <View style={[styles.circle, { backgroundColor: '#89B5CD' }]} />
+                            <Text style={styles.macrosText}>
+                              {Math.round(meal.foods.reduce((total, food) => total + food.fat, 0))}g
+                            </Text>
+                            <View style={[styles.circle, { backgroundColor: '#CD8A89' }]} />
+                            <Text style={styles.macrosText}>
+                              {Math.round(meal.foods.reduce((total, food) => total + food.protein, 0))}g
+                            </Text>
+                          </View>
+                          
+                        </View>
+                    
                     </View>
 
                     <View>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                        <Text style={{ fontFamily: 'OpenSans_400Regular' }}>{meal.calories}</Text>
+                        <Text style={{ fontFamily: 'OpenSans_400Regular' }}>{Math.round(meal.foods.reduce((total, food) => total + food.calories, 0))} kcal</Text>
                         <TouchableOpacity onPress={() => deleteMeal(meal.id)}>
                           <AntDesign name="close" size={15} color="black" />
                         </TouchableOpacity>
@@ -297,14 +321,13 @@ export default function Index() {
                       />
                     </View>
                   </View>
-
                   {expandedMealId === meal.id && (
                     <View>
                       {meal.foods.map((food) => (
                         <View key={food.food_id} style={styles.foodItem}>
                           <TouchableOpacity
                             onPress={() =>
-                              handleSelectFood(meal.id, food.food_name, food.foodId, food.weight)
+                              handleSelectFood(meal.id, food.id, food.food_name, food.weight)
                             }
                           >
                             <Text style={styles.foodItemText}>{food.food_name}</Text> 
@@ -352,7 +375,7 @@ export default function Index() {
                     onPress={() =>
                       updateFoodInMeal(
                         selectedFood.mealId,
-                        selectedFood.foodId,
+                        selectedFood.id,
                         selectedFood.weight
                       )
                     }

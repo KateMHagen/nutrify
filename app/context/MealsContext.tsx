@@ -25,6 +25,7 @@ type MealsContextType = {
   getMeals: () => Meal[];
   updateMeals: (updatedMeals: Meal[]) => void;
   addMeal: () => void;
+  deleteMeal: (mealId: number) => void;
 };
 
 const MealsContext = createContext<MealsContextType | undefined>(undefined);
@@ -61,7 +62,7 @@ export const MealsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       .select(`
         id, name, calories, carbs, fat, protein,
         meal_foods (id, food_name, weight, calories, carbs, fat, protein)
-      `) // ✅ Fetch `id` from meal_foods
+      `) // Fetch id from meal_foods
       .eq('user_id', userId)
       .eq('date', date);
   
@@ -77,7 +78,7 @@ export const MealsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       carbs: meal.carbs,
       fat: meal.fat,
       protein: meal.protein,
-      foods: meal.meal_foods || [], // ✅ Ensures `foods` contains `id`
+      foods: meal.meal_foods || [], // Ensures foods contains id
     }));
   
     setMealsByDate((prev) => ({
@@ -132,9 +133,9 @@ export const MealsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   
     await saveMealsToDB(updatedMeals);
   
-    // ✅ Automatically fetch fresh meals from Supabase
+
     if (userId) {
-      await fetchMealsFromDB(userId, selectedDate); // ✅ Fetch new meals & update UI
+      await fetchMealsFromDB(userId, selectedDate); // Fetch meals & update UI
     }
   };
   
@@ -154,10 +155,45 @@ export const MealsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     updateMeals(updatedMeals);
   };
   
-
+  const deleteMeal = async (mealId: number) => {
+    if (!userId) return;
+  
+    try {
+      // Delete all foods in this meal
+      const { error: deleteFoodsError } = await supabase
+        .from('meal_foods')
+        .delete()
+        .eq('meal_id', mealId);
+  
+      if (deleteFoodsError) {
+        console.error('Error deleting meal foods:', deleteFoodsError.message);
+        return;
+      }
+  
+      // Delete the meal itself
+      const { error: deleteMealError } = await supabase
+        .from('meals')
+        .delete()
+        .eq('id', mealId);
+  
+      if (deleteMealError) {
+        console.error('Error deleting meal:', deleteMealError.message);
+        return;
+      }
+  
+      console.log(`Meal ${mealId} and all associated foods deleted.`);
+  
+      // Upate UI
+      updateMeals(getMeals().filter((meal) => meal.id !== mealId));
+  
+    } catch (error) {
+      console.error('Error deleting meal:', error);
+    }
+  };
+  
 
   return (
-    <MealsContext.Provider value={{ mealsByDate, selectedDate, setSelectedDate, getMeals, updateMeals, addMeal }}>
+    <MealsContext.Provider value={{ mealsByDate, selectedDate, setSelectedDate, getMeals, updateMeals, addMeal, deleteMeal}}>
       {children}
     </MealsContext.Provider>
   );
