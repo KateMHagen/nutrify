@@ -76,66 +76,47 @@ export default function AddFoodScreen() {
 
   const addFoodToMeal = async (food: any, mealId: number, customWeight = 100) => {
     if (!mealId || !food) {
-        console.error("Meal ID or food item is missing. Cannot add food.");
-        return;
+      console.error("Meal ID or food item is missing. Cannot add food.");
+      return;
     }
-
+  
     try {
-        // Extract and adjust nutrition details from FatSecret
-        const nutrition = parseNutritionalInfo(food.food_description);
-        const adjustedNutrition = adjustNutritionForWeight(nutrition, customWeight);
-
-        // Insert the food details directly into `meal_foods`
-        const { error: mealFoodError } = await supabase
-            .from('meal_foods')
-            .insert([{
-                meal_id: mealId, 
-                food_name: food.food_name, // Store food name from FatSecret
-                weight: customWeight,
-                calories: adjustedNutrition.calories,
-                carbs: parseFloat(adjustedNutrition.carbs),
-                fat: parseFloat(adjustedNutrition.fat),
-                protein: parseFloat(adjustedNutrition.protein),
-            }]);
-
-        if (mealFoodError) throw new Error(`Error linking food to meal: ${mealFoodError.message}`);
-
-        console.log(`Food "${food.food_name}" added to meal ${mealId}`);
-
-        // Update meals state to reflect the added food
-        const updatedMeals = getMeals().map((meal) => {
-            if (meal.id === mealId) {
-                return {
-                    ...meal,
-                    foods: [
-                        ...meal.foods,
-                        {
-                            foodName: food.food_name, // ✅ Store FatSecret food name
-                            foodId: food.food_id,
-                            weight: customWeight,
-                            calories: adjustedNutrition.calories,
-                            carbs: Number(adjustedNutrition.carbs),
-                            fat: Number(adjustedNutrition.fat),
-                            protein: Number(adjustedNutrition.protein),
-                        },
-                    ],
-                    // Update meal macros
-                    calories: (Number(meal.calories) || 0) + adjustedNutrition.calories,
-                    carbs: (Number(meal.carbs) || 0) + parseFloat(adjustedNutrition.carbs),
-                    fat: (Number(meal.fat) || 0) + parseFloat(adjustedNutrition.fat),
-                    protein: (Number(meal.protein) || 0) + parseFloat(adjustedNutrition.protein),
-                };
-            }
-            return meal;
-        });
-
-        updateMeals(updatedMeals);
-        setSelectedFood(null);
-
+      const nutrition = parseNutritionalInfo(food.food_description);
+      const adjustedNutrition = adjustNutritionForWeight(nutrition, customWeight);
+  
+      // ✅ Insert food and retrieve `id`
+      const { data, error: mealFoodError } = await supabase
+        .from('meal_foods')
+        .insert([{
+          meal_id: mealId,
+          food_name: food.food_name,
+          weight: customWeight,
+          calories: adjustedNutrition.calories,
+          carbs: parseFloat(adjustedNutrition.carbs),
+          fat: parseFloat(adjustedNutrition.fat),
+          protein: parseFloat(adjustedNutrition.protein),
+        }])
+        .select()
+        .single();
+  
+      if (mealFoodError) throw new Error(`Error linking food to meal: ${mealFoodError.message}`);
+  
+      console.log(`Food "${food.food_name}" added to meal ${mealId}, ID: ${data.id}`);
+  
+      // ✅ Fetch latest meals from Supabase & update UI
+    
+      updateMeals(getMeals());
+  
+      setSelectedFood(null);
+  
     } catch (error) {
-        console.error("Error adding food to meal:", error);
+      console.error("Error adding food to meal:", error);
     }
-};
+  };
+  
+  
+
+  
 
 
 
@@ -208,7 +189,7 @@ export default function AddFoodScreen() {
                 />
 
                 <View style={styles.modalButtons}>
-                  <TouchableOpacity onPress={() => addFoodToMeal(selectedFood, customWeight)}>
+                  <TouchableOpacity onPress={() => addFoodToMeal(selectedFood, mealId, customWeight)}>
                     <Text style={styles.buttonText}>Add to Meal</Text>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => setSelectedFood(null)}>

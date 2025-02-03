@@ -14,9 +14,10 @@ import { CustomButton } from '../components/CustomButton';
 import { useMeals } from '../context/MealsContext';
 import { router } from 'expo-router';
 import AntDesign from '@expo/vector-icons/AntDesign';
+import supabase from '@/lib/supabase';
 
 export default function Index() {
-  const { selectedDate, setSelectedDate, getMeals, updateMeals, addMeal } = useMeals(); // Updated context for date-based meals
+  const { selectedDate, setSelectedDate, getMeals, updateMeals, addMeal } = useMeals();
   const [editingMeal, setEditingMeal] = useState<{ id: number; name: string } | null>(null);
   const [expandedMealId, setExpandedMealId] = useState<number | null>(null);
   const [selectedFood, setSelectedFood] = useState<{
@@ -34,6 +35,7 @@ export default function Index() {
   });
 
   const meals = getMeals();
+  
 
   // Calculate daily totals
   useEffect(() => {
@@ -47,8 +49,7 @@ export default function Index() {
       },
       { calories: 0, carbs: 0, fat: 0, protein: 0 }
     );
-  
-    // Only update state if totals have changed to prevent unnecessary renders
+
     setDailyTotals((prevTotals) => {
       const updatedTotals = {
         calories: Math.round(totals.calories),
@@ -56,7 +57,7 @@ export default function Index() {
         fat: Math.round(totals.fat),
         protein: Math.round(totals.protein),
       };
-  
+
       if (
         prevTotals.calories !== updatedTotals.calories ||
         prevTotals.carbs !== updatedTotals.carbs ||
@@ -65,15 +66,12 @@ export default function Index() {
       ) {
         return updatedTotals;
       }
-  
-      return prevTotals; // No change, so no re-render
+      return prevTotals;
     });
   }, [meals]);
-  
 
   const changeDate = (days: number) => {
     if (days === 0) {
-      // If 0 is passed, set the selectedDate to today's date
       const today = new Date().toISOString().split('T')[0];
       setSelectedDate(today);
     } else {
@@ -84,15 +82,17 @@ export default function Index() {
   };
 
   const toggleExpandMeal = (id: number) => {
-    setExpandedMealId((prevId) => (prevId === id ? null : id)); // Toggle expand/collapse
+    setExpandedMealId((prevId) => (prevId === id ? null : id));
   };
 
   const handleSelectFood = (mealId: number, foodName: string, foodId: number, weight: number) => {
     setSelectedFood({ mealId, foodName, foodId, weight });
   };
 
+  // Update food weight and recalc macros locally (the MealsContext updateMeals call will upsert to Supabase)
   const updateFoodInMeal = (mealId: number, foodId: number, newWeight: number) => {
-    const updatedMeals = meals.map((meal) => {
+    const currentMeals = getMeals();
+    const updatedMeals = currentMeals.map((meal) => {
       if (meal.id === mealId) {
         const updatedFoods = meal.foods.map((food) => {
           if (food.foodId === foodId) {
@@ -108,7 +108,6 @@ export default function Index() {
           }
           return food;
         });
-  
         const updatedMealTotals = updatedFoods.reduce(
           (acc, food) => {
             acc.calories += food.calories;
@@ -119,7 +118,6 @@ export default function Index() {
           },
           { calories: 0, carbs: 0, fat: 0, protein: 0 }
         );
-  
         return {
           ...meal,
           foods: updatedFoods,
@@ -131,52 +129,47 @@ export default function Index() {
       }
       return meal;
     });
-  
-    // Ensure the state is updated to a new reference
     updateMeals(updatedMeals);
-    setSelectedFood(null); // Close the modal
+    setSelectedFood(null);
+    // Auto-expand this meal so its foods are visible
+    setExpandedMealId(mealId);
   };
-  
 
-  const removeFoodFromMeal = (mealId: number, foodId: number) => {
-    const meals = getMeals();
+  const removeFoodFromMeal = async (mealId: number, foodId: number) => {
+    try {
+      // ✅ Remove food using `id`
+      const { error } = await supabase
+        .from('meal_foods')
+        .delete()
+        .match({ id: foodId }); // ✅ Use primary key `id`
   
-    const updatedMeals = meals.map((meal) => {
-      if (meal.id === mealId) {
-        // Remove the food item
-        const updatedFoods = meal.foods.filter((food) => food.foodId !== foodId);
-  
-        // Recalculate meal totals
-        const updatedTotals = updatedFoods.reduce(
-          (acc, food) => {
-            acc.calories += food.calories;
-            acc.carbs += food.carbs;
-            acc.fat += food.fat;
-            acc.protein += food.protein;
-            return acc;
-          },
-          { calories: 0, carbs: 0, fat: 0, protein: 0 }
-        );
-  
-        return {
-          ...meal,
-          foods: updatedFoods,
-          calories: Math.round(updatedTotals.calories),
-          carbs: Math.round(updatedTotals.carbs),
-          fat: Math.round(updatedTotals.fat),
-          protein: Math.round(updatedTotals.protein),
-        };
+      if (error) {
+        console.error('Error removing food:', error.message);
+        return;
       }
-      return meal;
-    });
   
-    // Update the meals for the current date
-    updateMeals(updatedMeals);
+      // ✅ Update UI to remove only the selected food
+      const updatedMeals = meals.map((meal) => {
+        if (meal.id === mealId) {
+          return {
+            ...meal,
+            foods: meal.foods.filter((food) => food.id !== foodId), // ✅ Remove only this row
+          };
+        }
+        return meal;
+      });
+  
+      updateMeals(updatedMeals);
+  
+    } catch (error) {
+      console.error('Error removing food from meal:', error);
+    }
   };
+  
   
 
   const deleteMeal = (mealId: number) => {
-    updateMeals(meals.filter((meal) => meal.id !== mealId));
+    updateMeals(getMeals().filter((meal) => meal.id !== mealId));
   };
 
   const handleTap = (meal: { id: number; name: string }) => {
@@ -193,7 +186,7 @@ export default function Index() {
   const saveName = () => {
     if (editingMeal) {
       updateMeals(
-        meals.map((meal) =>
+        getMeals().map((meal) =>
           meal.id === editingMeal.id ? { ...meal, name: editingMeal.name } : meal
         )
       );
@@ -215,17 +208,17 @@ export default function Index() {
             <View>
               <Text style={styles.medText}>Carbs</Text>
               <Text style={styles.gramsText}>{dailyTotals.carbs}g / 120g</Text>
-              <View style={{ height: '5%', backgroundColor: '#C889CD', borderRadius: '5%' }}></View>
+              <View style={{ height: '5%', backgroundColor: '#C889CD', borderRadius: 5 }} />
             </View>
             <View>
               <Text style={styles.medText}>Fat</Text>
               <Text style={styles.gramsText}>{dailyTotals.fat}g / 120g</Text>
-              <View style={{ height: '5%', backgroundColor: '#89B5CD', borderRadius: '5%', marginTop: 3 }}></View>
+              <View style={{ height: '5%', backgroundColor: '#89B5CD', borderRadius: 5, marginTop: 3 }} />
             </View>
             <View>
               <Text style={styles.medText}>Protein</Text>
               <Text style={styles.gramsText}>{dailyTotals.protein}g / 120g</Text>
-              <View style={{ height: '5%', backgroundColor: '#CD8A89', borderRadius: '5%', marginTop: 3 }}></View>
+              <View style={{ height: '5%', backgroundColor: '#CD8A89', borderRadius: 5, marginTop: 3 }} />
             </View>
           </View>
         </View>
@@ -265,10 +258,7 @@ export default function Index() {
                             {expandedMealId === meal.id ? '▲' : '▼'}
                           </Text>
                         </TouchableWithoutFeedback>
-                        <TouchableWithoutFeedback
-                          onPress={() => handleTap(meal)}
-                          delayLongPress={300}
-                        >
+                        <TouchableWithoutFeedback onPress={() => handleTap(meal)} delayLongPress={300}>
                           {editingMeal?.id === meal.id ? (
                             <TextInput
                               value={editingMeal.name}
@@ -295,9 +285,8 @@ export default function Index() {
                     <View>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                         <Text style={{ fontFamily: 'OpenSans_400Regular' }}>{meal.calories}</Text>
-
                         <TouchableOpacity onPress={() => deleteMeal(meal.id)}>
-                          <Text><AntDesign name="close" size={15} color="black" /></Text>
+                          <AntDesign name="close" size={15} color="black" />
                         </TouchableOpacity>
                       </View>
                       <CustomButton
@@ -312,32 +301,25 @@ export default function Index() {
                   {expandedMealId === meal.id && (
                     <View>
                       {meal.foods.map((food) => (
-                        <View key={food.foodId} style={styles.foodItem}>
+                        <View key={food.food_id} style={styles.foodItem}>
                           <TouchableOpacity
                             onPress={() =>
-                              handleSelectFood(meal.id, food.foodName, food.foodId, food.weight)
+                              handleSelectFood(meal.id, food.food_name, food.foodId, food.weight)
                             }
                           >
-                            <View style={{ flexDirection: 'row' }}>
-                              <View>
-                                <Text style={styles.foodItemText}>{food.foodName}</Text>
-                              </View>
-                            </View>
+                            <Text style={styles.foodItemText}>{food.food_name}</Text> 
                           </TouchableOpacity>
-                          
-                            <Text style={[styles.foodItemText, { marginLeft: 'auto' }]}>
-                              {Math.round(food.calories)} kcal
-                              <TouchableOpacity onPress={() => removeFoodFromMeal(meal.id, food.foodId)}>
-                                
-                                <Text style={{marginLeft: 15}}><AntDesign name="close" size={12} color="black" /></Text>
-                                
-                              </TouchableOpacity>
-                            </Text>
-  
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Text style={styles.foodItemText}>{Math.round(food.calories)} kcal</Text>
+                            <TouchableOpacity onPress={() => removeFoodFromMeal(meal.id, food.id)}>
+                              <AntDesign name="close" size={12} color="black" style={{ marginLeft: 15 }} />
+                            </TouchableOpacity>
+                          </View>
                         </View>
                       ))}
                     </View>
                   )}
+
                 </View>
               </TouchableWithoutFeedback>
             )}
@@ -360,9 +342,7 @@ export default function Index() {
                   keyboardType="numeric"
                   value={String(selectedFood.weight)}
                   onChangeText={(value) =>
-                    setSelectedFood((prev) =>
-                      prev ? { ...prev, weight: Number(value) } : null
-                    )
+                    setSelectedFood((prev) => (prev ? { ...prev, weight: Number(value) } : null))
                   }
                   placeholder="Enter weight in grams"
                   style={styles.modalTextInput}
@@ -427,8 +407,7 @@ const styles = StyleSheet.create({
     fontFamily: 'OpenSans_300Light',
   },
   mealContainer: {
-    marginLeft: 30,
-    marginRight: 30,
+    marginHorizontal: 30,
     marginTop: 20,
     backgroundColor: '#FBFBFB',
     borderRadius: 10,
@@ -437,8 +416,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 5,
-    elevation: 5, // For Android
-
+    elevation: 5,
   },
   mealInfo: {
     flexDirection: 'row',
@@ -465,17 +443,16 @@ const styles = StyleSheet.create({
   },
   addMealBtn: {
     marginTop: 20,
-    marginLeft: 30,
-    marginRight: 30,
+    marginHorizontal: 30,
   },
   dayNav: {
     flexDirection: 'row',
     justifyContent: 'center',
-    padding: 10,    
+    padding: 10,
   },
   dayNavText: {
     fontFamily: 'OpenSans_400Regular',
-    marginHorizontal: 10
+    marginHorizontal: 10,
   },
   input: {
     borderBottomWidth: 1,
@@ -501,7 +478,7 @@ const styles = StyleSheet.create({
     padding: 5,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    borderRadius: 5
+    borderRadius: 5,
   },
   modalContainer: {
     flex: 1,

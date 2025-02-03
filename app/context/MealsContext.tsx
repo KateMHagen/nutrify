@@ -2,17 +2,7 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import supabase from '@/lib/supabase';
-import { v4 as uuidv4 } from 'uuid';
 
-type Food = {
-  foodName: string;
-  weight: number;
-  foodId: number;
-  calories: number;
-  carbs: number;
-  fat: number;
-  protein: number;
-};
 
 type Meal = {
   id: number;
@@ -21,7 +11,7 @@ type Meal = {
   fat: number;
   protein: number;
   calories: number;
-  foods: Food[];
+  foods: any[];
 };
 
 type MealsByDate = {
@@ -66,17 +56,20 @@ export const MealsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
 
   const fetchMealsFromDB = async (userId: string, date: string) => {
-    const {data, error} = await supabase
+    const { data, error } = await supabase
       .from('meals')
-      .select('*')
+      .select(`
+        id, name, calories, carbs, fat, protein,
+        meal_foods (id, food_name, weight, calories, carbs, fat, protein)
+      `) // ✅ Fetch `id` from meal_foods
       .eq('user_id', userId)
       .eq('date', date);
-
-    if(error) {
-      console.error('Error fetching meals: ', error.message);
+  
+    if (error) {
+      console.error('Error fetching meals:', error.message);
       return;
     }
-
+  
     const meals = data.map((meal: any) => ({
       id: meal.id,
       name: meal.name,
@@ -84,15 +77,21 @@ export const MealsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       carbs: meal.carbs,
       fat: meal.fat,
       protein: meal.protein,
-      foods: meal.foods ? JSON.parse(meal.foods) : [],
+      foods: meal.meal_foods || [], // ✅ Ensures `foods` contains `id`
     }));
-
+  
     setMealsByDate((prev) => ({
       ...prev,
-      [date]: meals.length > 0 ? meals : [...defaultMeals], // Default if no meals exist for the date
+      [date]: meals.length > 0 ? meals : [],
     }));
-
   };
+  
+  
+  
+  
+  
+ 
+  
 
   
 
@@ -125,14 +124,20 @@ export const MealsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return mealsByDate[selectedDate] || defaultMeals;
   };
 
-  const updateMeals = (updatedMeals: Meal[]) => {
+  const updateMeals = async (updatedMeals: Meal[]) => {
     setMealsByDate((prev) => ({
       ...prev,
       [selectedDate]: updatedMeals,
     }));
-
-    saveMealsToDB(updatedMeals);
+  
+    await saveMealsToDB(updatedMeals);
+  
+    // ✅ Automatically fetch fresh meals from Supabase
+    if (userId) {
+      await fetchMealsFromDB(userId, selectedDate); // ✅ Fetch new meals & update UI
+    }
   };
+  
 
   const addMeal = () => {
     const newMeal: Meal = {
