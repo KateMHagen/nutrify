@@ -12,6 +12,7 @@ import {
 import { useMeals } from '../context/MealsContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import searchFoods from '@/lib/fatsecret';
+import supabase from '@/lib/supabase';
 
 // Helper functions for nutrition parsing and adjustment
 export const parseNutritionalInfo = (foodDescription: string) => {
@@ -45,15 +46,14 @@ export default function AddFoodScreen() {
   const [query, setQuery] = useState<string>('');
   const [foods, setFoods] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [selectedFood, setSelectedFood] = useState<any>(null); // For the modal
-  const [customWeight, setCustomWeight] = useState<number>(100); // Default weight in grams
-  const { getMeals, updateMeals } = useMeals();
-  const navigation = useNavigation();
-  const route = useRoute();
+  const [selectedFood, setSelectedFood] = useState<any>(null);
+  const [customWeight, setCustomWeight] = useState<number>(100);
+  const { getMeals, updateMeals } = useMeals(); 
 
+  const route = useRoute();
   const { mealId } = route.params as { mealId: number };
 
-  const handleSearch = async () => {
+   const handleSearch = async () => {
     if (query.trim()) {
       setLoading(true);
       try {
@@ -74,71 +74,45 @@ export default function AddFoodScreen() {
     }
   };
 
-  const handleSelectFood = (food: any) => {
-    setSelectedFood(food);
-  };
+  const addFoodToMeal = async (food: any, customWeight = 100) => {
+    const nutrition = parseNutritionalInfo(food.food_description);
+    const adjustedNutrition = adjustNutritionForWeight(nutrition, customWeight);
 
-  const addFoodToMeal = (
-    food: { food_description: string; food_name: string },
-    customWeight = 100
-  ) => {
-    const nutritionalInfo = parseNutritionalInfo(food.food_description);
-  
-    // Adjust nutritional values based on the custom weight
-    const adjustedNutrition = adjustNutritionForWeight(nutritionalInfo, customWeight);
-  
-    // Get the current meals for the selected date
     const meals = getMeals();
-  
-    const updatedMeals = meals.map((meal) => {
-      if (meal.id === Number(mealId)) {
-        const maxFoodId = meal.foods.length > 0 ? Math.max(...meal.foods.map((f) => f.foodId)) : 0;
-        const newFoodId = maxFoodId + 1;
-  
-        // Add the new food with adjusted nutrition
-        const updatedFoods = [
-          ...meal.foods,
-          {
-            foodName: food.food_name,
-            weight: customWeight,
-            foodId: newFoodId,
-            calories: adjustedNutrition.calories,
-            carbs: Number(adjustedNutrition.carbs), // Ensure it's a number
-            fat: Number(adjustedNutrition.fat), // Ensure it's a number
-            protein: Number(adjustedNutrition.protein), // Ensure it's a number
-          },
-        ];
-  
-        // Recalculate the meal's total nutrition values
-        const updatedTotals = updatedFoods.reduce(
-          (acc, food) => {
-            acc.calories += food.calories;
-            acc.carbs += food.carbs;
-            acc.fat += food.fat;
-            acc.protein += food.protein;
-            return acc;
-          },
-          { calories: 0, carbs: 0, fat: 0, protein: 0 }
-        );
-  
-        return {
-          ...meal,
-          foods: updatedFoods,
-          calories: `${Math.round(updatedTotals.calories)} kcal`,
-          carbs: `${Math.round(updatedTotals.carbs)}g`,
-          fat: `${Math.round(updatedTotals.fat)}g`,
-          protein: `${Math.round(updatedTotals.protein)}g`,
-        };
-      }
-      return meal;
+    const updatedMeals = meals.map((meal: { id: number; foods: any[]; }) => {
+        if (meal.id === mealId) {
+            const maxFoodId = meal.foods.length > 0 ? Math.max(...meal.foods.map((f) => f.foodId)) : 0;
+            const newFoodId = maxFoodId + 1;
+
+            const updatedFoods = [
+                ...meal.foods,
+                {
+                    foodName: food.food_name,
+                    weight: customWeight,
+                    foodId: newFoodId,
+                    calories: adjustedNutrition.calories,
+                    carbs: Number(adjustedNutrition.carbs),
+                    fat: Number(adjustedNutrition.fat),
+                    protein: Number(adjustedNutrition.protein),
+                },
+            ];
+
+            return {
+                ...meal,
+                foods: updatedFoods,
+                calories: updatedFoods.reduce((sum, f) => sum + f.calories, 0),  // Ensure integer
+                carbs: updatedFoods.reduce((sum, f) => sum + f.carbs, 0).toFixed(2),
+                fat: updatedFoods.reduce((sum, f) => sum + f.fat, 0).toFixed(2),
+                protein: updatedFoods.reduce((sum, f) => sum + f.protein, 0).toFixed(2),
+            };
+        }
+        return meal;
     });
-  
-    // Update the meals for the current date
+
     updateMeals(updatedMeals);
-  
-    // Close the modal
     setSelectedFood(null);
-  };
+};
+
   
   
   
@@ -170,7 +144,7 @@ export default function AddFoodScreen() {
         keyExtractor={(item) => item.food_id.toString()}
         renderItem={({ item }) => (
           <View style={styles.foodItemContainer}>
-            <TouchableOpacity onPress={() => handleSelectFood(item)}>
+            <TouchableOpacity onPress={() => setSelectedFood(item)}>
               <Text style={styles.foodItem}>{item.food_name}</Text>
               <Text style={styles.smallText}>{item.food_description}</Text>
             </TouchableOpacity>
