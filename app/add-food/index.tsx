@@ -74,44 +74,73 @@ export default function AddFoodScreen() {
     }
   };
 
-  const addFoodToMeal = async (food: any, customWeight = 100) => {
-    const nutrition = parseNutritionalInfo(food.food_description);
-    const adjustedNutrition = adjustNutritionForWeight(nutrition, customWeight);
+  const addFoodToMeal = async (food: any, mealId: number, customWeight = 100) => {
+    if (!mealId || !food) {
+        console.error("Meal ID or food item is missing. Cannot add food.");
+        return;
+    }
 
-    const meals = getMeals();
-    const updatedMeals = meals.map((meal: { id: number; foods: any[]; }) => {
-        if (meal.id === mealId) {
-            const maxFoodId = meal.foods.length > 0 ? Math.max(...meal.foods.map((f) => f.foodId)) : 0;
-            const newFoodId = maxFoodId + 1;
+    try {
+        // Extract and adjust nutrition details from FatSecret
+        const nutrition = parseNutritionalInfo(food.food_description);
+        const adjustedNutrition = adjustNutritionForWeight(nutrition, customWeight);
 
-            const updatedFoods = [
-                ...meal.foods,
-                {
-                    foodName: food.food_name,
-                    weight: customWeight,
-                    foodId: newFoodId,
-                    calories: adjustedNutrition.calories,
-                    carbs: Number(adjustedNutrition.carbs),
-                    fat: Number(adjustedNutrition.fat),
-                    protein: Number(adjustedNutrition.protein),
-                },
-            ];
+        // Insert the food details directly into `meal_foods`
+        const { error: mealFoodError } = await supabase
+            .from('meal_foods')
+            .insert([{
+                meal_id: mealId, 
+                food_name: food.food_name, // Store food name from FatSecret
+                weight: customWeight,
+                calories: adjustedNutrition.calories,
+                carbs: parseFloat(adjustedNutrition.carbs),
+                fat: parseFloat(adjustedNutrition.fat),
+                protein: parseFloat(adjustedNutrition.protein),
+            }]);
 
-            return {
-                ...meal,
-                foods: updatedFoods,
-                calories: updatedFoods.reduce((sum, f) => sum + f.calories, 0),  // Ensure integer
-                carbs: updatedFoods.reduce((sum, f) => sum + f.carbs, 0).toFixed(2),
-                fat: updatedFoods.reduce((sum, f) => sum + f.fat, 0).toFixed(2),
-                protein: updatedFoods.reduce((sum, f) => sum + f.protein, 0).toFixed(2),
-            };
-        }
-        return meal;
-    });
+        if (mealFoodError) throw new Error(`Error linking food to meal: ${mealFoodError.message}`);
 
-    updateMeals(updatedMeals);
-    setSelectedFood(null);
+        console.log(`Food "${food.food_name}" added to meal ${mealId}`);
+
+        // Update meals state to reflect the added food
+        const updatedMeals = getMeals().map((meal) => {
+            if (meal.id === mealId) {
+                return {
+                    ...meal,
+                    foods: [
+                        ...meal.foods,
+                        {
+                            foodName: food.food_name, // ✅ Store FatSecret food name
+                            foodId: food.food_id,
+                            weight: customWeight,
+                            calories: adjustedNutrition.calories,
+                            carbs: Number(adjustedNutrition.carbs),
+                            fat: Number(adjustedNutrition.fat),
+                            protein: Number(adjustedNutrition.protein),
+                        },
+                    ],
+                    // Update meal macros
+                    calories: (Number(meal.calories) || 0) + adjustedNutrition.calories,
+                    carbs: (Number(meal.carbs) || 0) + parseFloat(adjustedNutrition.carbs),
+                    fat: (Number(meal.fat) || 0) + parseFloat(adjustedNutrition.fat),
+                    protein: (Number(meal.protein) || 0) + parseFloat(adjustedNutrition.protein),
+                };
+            }
+            return meal;
+        });
+
+        updateMeals(updatedMeals);
+        setSelectedFood(null);
+
+    } catch (error) {
+        console.error("Error adding food to meal:", error);
+    }
 };
+
+
+
+
+
 
   
   
@@ -148,7 +177,7 @@ export default function AddFoodScreen() {
               <Text style={styles.foodItem}>{item.food_name}</Text>
               <Text style={styles.smallText}>{item.food_description}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => addFoodToMeal(item)}>
+            <TouchableOpacity onPress={() => addFoodToMeal(item, mealId)}>
               <Text style={{ color: 'green', fontSize: 18 }}>+</Text>
             </TouchableOpacity>
           </View>

@@ -17,10 +17,10 @@ type Food = {
 type Meal = {
   id: number;
   name: string;
-  carbs: string;
-  fat: string;
-  protein: string;
-  calories: string;
+  carbs: number;
+  fat: number;
+  protein: number;
+  calories: number;
   foods: Food[];
 };
 
@@ -40,9 +40,9 @@ type MealsContextType = {
 const MealsContext = createContext<MealsContextType | undefined>(undefined);
 
 const defaultMeals: Meal[] = [
-  { id: 1, name: 'Breakfast', foods: [], calories: '0', carbs: '0', fat: '0', protein: '0' },
-  { id: 2, name: 'Lunch', foods: [], calories: '0', carbs: '0', fat: '0', protein: '0' },
-  { id: 3, name: 'Dinner', foods: [], calories: '0', carbs: '0', fat: '0', protein: '0' },
+  { id: 1, name: 'Breakfast', foods: [], calories: 0, carbs: 0, fat: 0, protein: 0 },
+  { id: 2, name: 'Lunch', foods: [], calories: 0, carbs: 0, fat:0, protein: 0 },
+  { id: 3, name: 'Dinner', foods: [], calories: 0, carbs: 0, fat: 0, protein: 0 },
 ];
 
 export const MealsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -94,6 +94,8 @@ export const MealsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   };
 
+  
+
   const saveMealsToDB = async (meals: Meal[]) => {
     if (!userId) return;
 
@@ -105,10 +107,10 @@ export const MealsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 user_id: userId,
                 date: selectedDate,
                 name: meal.name,
-                calories: parseInt(meal.calories, 10),  // Ensure integer
-                carbs: parseFloat(meal.carbs),  // Ensure float
-                fat: parseFloat(meal.fat),  // Ensure float
-                protein: parseFloat(meal.protein),  // Ensure float
+                calories: Number(meal.calories),  // Ensure integer
+                carbs: Number(meal.carbs),  // Ensure float
+                fat: Number(meal.fat),  // Ensure float
+                protein:Number(meal.protein),  // Ensure float
                 foods: JSON.stringify(meal.foods),
             });
 
@@ -136,10 +138,10 @@ export const MealsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const newMeal: Meal = {
       id: new Date().getTime(),
       name: `Meal`,
-      carbs: '0',
-      fat: '0',
-      protein: '0',
-      calories: '0',
+      carbs: 0,
+      fat: 0,
+      protein: 0,
+      calories: 0,
       foods: [],
     };
 

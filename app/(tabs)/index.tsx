@@ -39,10 +39,10 @@ export default function Index() {
   useEffect(() => {
     const totals = meals.reduce(
       (acc, meal) => {
-        acc.calories += parseInt(meal.calories) || 0;
-        acc.carbs += parseInt(meal.carbs) || 0;
-        acc.fat += parseInt(meal.fat) || 0;
-        acc.protein += parseInt(meal.protein) || 0;
+        acc.calories += Number(meal.calories) || 0;
+        acc.carbs += Number(meal.carbs) || 0;
+        acc.fat += Number(meal.fat) || 0;
+        acc.protein += Number(meal.protein) || 0;
         return acc;
       },
       { calories: 0, carbs: 0, fat: 0, protein: 0 }
@@ -123,10 +123,10 @@ export default function Index() {
         return {
           ...meal,
           foods: updatedFoods,
-          calories: `${Math.round(updatedMealTotals.calories)} kcal`,
-          carbs: `${Math.round(updatedMealTotals.carbs)}g`,
-          fat: `${Math.round(updatedMealTotals.fat)}g`,
-          protein: `${Math.round(updatedMealTotals.protein)}g`,
+          calories: Math.round(updatedMealTotals.calories),
+          carbs: Math.round(updatedMealTotals.carbs),
+          fat: Math.round(updatedMealTotals.fat),
+          protein: Math.round(updatedMealTotals.protein),
         };
       }
       return meal;
@@ -161,10 +161,10 @@ export default function Index() {
         return {
           ...meal,
           foods: updatedFoods,
-          calories: `${Math.round(updatedTotals.calories)} kcal`,
-          carbs: `${Math.round(updatedTotals.carbs)}g`,
-          fat: `${Math.round(updatedTotals.fat)}g`,
-          protein: `${Math.round(updatedTotals.protein)}g`,
+          calories: Math.round(updatedTotals.calories),
+          carbs: Math.round(updatedTotals.carbs),
+          fat: Math.round(updatedTotals.fat),
+          protein: Math.round(updatedTotals.protein),
         };
       }
       return meal;
